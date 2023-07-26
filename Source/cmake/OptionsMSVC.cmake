@@ -148,6 +148,7 @@ if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
     #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /VERBOSE /VERBOSE:INCR /TIME")
     #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE /VERBOSE:INCR /TIME")
 elseif (${CMAKE_BUILD_TYPE} MATCHES "Release")
+    add_compile_options(/O2)
     add_compile_options(/Oy-)
 endif ()
 

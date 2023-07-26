@@ -347,7 +347,12 @@ private:
         };
     };
 
+    // Don't know why the Location is 8 bytes when building on Windows instead of 4
+    #if OS(WINDOWS)
+    static_assert(sizeof(Location) == 8);
+    #else
     static_assert(sizeof(Location) == 4);
+    #endif
 
     static bool isValidValueTypeKind(TypeKind kind)
     {

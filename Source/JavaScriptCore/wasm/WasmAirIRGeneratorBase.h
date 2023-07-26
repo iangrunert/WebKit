@@ -29,6 +29,21 @@
 #include "WasmAirIRGenerator.h"
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
+#pragma push_macro("RotateLeft32")
+#pragma push_macro("RotateLeft64")
+#pragma push_macro("RotateRight32")
+#pragma push_macro("RotateRight64")
+#pragma push_macro("StoreFence")
+#pragma push_macro("LoadFence")
+#pragma push_macro("MemoryFence")
+
+#undef RotateLeft32
+#undef RotateLeft64
+#undef RotateRight32
+#undef RotateRight64
+#undef StoreFence
+#undef LoadFence
+#undef MemoryFence
 
 #include "AirCCallSpecial.h"
 #include "AirCode.h"
@@ -5078,4 +5093,11 @@ auto AirIRGeneratorBase<Derived, ExpressionType>::addI64Add(ExpressionType arg0,
 
 } } // namespace JSC::Wasm
 
+#pragma pop_macro("RotateLeft32")
+#pragma pop_macro("RotateLeft64")
+#pragma pop_macro("RotateRight32")
+#pragma pop_macro("RotateRight64")
+#pragma pop_macro("StoreFence")
+#pragma pop_macro("LoadFence")
+#pragma pop_macro("MemoryFence")
 #endif // ENABLE(WEBASSEMBLY_B3JIT)

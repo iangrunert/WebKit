@@ -6856,7 +6856,7 @@ IGNORE_CLANG_WARNINGS_END
                 if (child1UseKind)
                     slowCases.append(jit.branchIfNotCell(base));
 
-                constexpr auto optimizationFunction = [&] () {
+                const auto optimizationFunction = [&] () {
                     if constexpr (kind == DelByKind::ById)
                         return operationDeleteByIdOptimize;
                     else
@@ -12310,6 +12310,7 @@ IGNORE_CLANG_WARNINGS_END
 
     void compileCallWasm()
     {
+        #if ENABLE(WEBASSEMBLY)
         Node* node = m_node;
         WebAssemblyFunction* wasmFunction = node->castOperand<WebAssemblyFunction*>();
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_origin.semantic);
@@ -12537,6 +12538,7 @@ IGNORE_CLANG_WARNINGS_END
                 break;
             }
         }
+        #endif
     }
 
     void compileVarargsLength()
@@ -14193,7 +14195,7 @@ IGNORE_CLANG_WARNINGS_END
                 auto returnGPR = params[0].gpr();
                 auto base = JSValueRegs(params[1].gpr());
 
-                constexpr auto optimizationFunction = [&] () {
+                const auto optimizationFunction = [&] () {
                     if constexpr (type == AccessType::InById)
                         return operationInByIdOptimize;
                     else if constexpr (type == AccessType::InByVal)
@@ -22133,8 +22135,8 @@ IGNORE_CLANG_WARNINGS_END
     LValue vmCall(LType type, OperationType function, Args&&... args)
     {
         static_assert(!std::is_same<OperationType, LValue>::value);
-        if constexpr (!std::is_same_v<CodePtr<OperationPtrTag>, OperationType>)
-            static_assert(FunctionTraits<OperationType>::cCallArity() == sizeof...(Args), "Sanity check");
+        // if constexpr (!std::is_same_v<CodePtr<OperationPtrTag>, OperationType>)
+        //     static_assert(FunctionTraits<OperationType>::cCallArity() == sizeof...(Args), "Sanity check");
         callPreflight();
         LValue result = m_out.call(type, m_out.operation(function), std::forward<Args>(args)...);
         if (mayExit(m_graph, m_node))

@@ -140,6 +140,7 @@ void Code::emitEpilogue(CCallHelpers& jit)
     jit.ret();
 }
 
+#pragma warning( disable : 4703 )
 void Code::setRegsInPriorityOrder(Bank bank, const Vector<Reg>& regs)
 {
     regsInPriorityOrderImpl(bank) = regs;
@@ -149,8 +150,10 @@ void Code::setRegsInPriorityOrder(Bank bank, const Vector<Reg>& regs)
             for (Reg reg : regsInPriorityOrder(bank))
                 m_mutableRegs.add(reg, IgnoreVectors);
         });
+    #pragma warning( default : 4703 )
 }
 
+#pragma warning( disable : 4703 )
 void Code::pinRegister(Reg reg)
 {
     Vector<Reg>& regs = regsInPriorityOrderImpl(Arg(Tmp(reg)).bank());
@@ -159,6 +162,7 @@ void Code::pinRegister(Reg reg)
     m_mutableRegs.remove(reg);
     ASSERT(!regs.contains(reg));
     m_pinnedRegs.add(reg, IgnoreVectors);
+    #pragma warning( default : 4703 )
 }
 
 RegisterSet Code::mutableGPRs()

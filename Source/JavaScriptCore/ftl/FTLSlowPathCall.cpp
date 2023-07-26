@@ -82,6 +82,7 @@ SlowPathCallContext::SlowPathCallContext(
         stackBytesNeededForReturnAddress +
         (usedRegisters.numberOfSetRegisters() - numberOfCallingConventionRegisters) * wordSize;
         
+    #pragma warning( suppress: 4319 )
     m_stackBytesNeeded = (m_stackBytesNeeded + stackAlignmentBytes() - 1) & ~(stackAlignmentBytes() - 1);
         
     m_jit.subPtr(CCallHelpers::TrustedImm32(m_stackBytesNeeded), CCallHelpers::stackPointerRegister);

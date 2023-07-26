@@ -2789,7 +2789,7 @@ void Heap::didFreeBlock(size_t capacity)
 constexpr bool objcAPIEnabled = true;
 #else
 constexpr bool objcAPIEnabled = false;
-static UNUSED_FUNCTION void scanExternalRememberedSet(VM&, AbstractSlotVisitor&) { }
+static ALWAYS_INLINE UNUSED_FUNCTION void scanExternalRememberedSet(VM&, AbstractSlotVisitor&) { }
 #endif
 
 #if ENABLE(SAMPLING_PROFILER)

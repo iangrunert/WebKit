@@ -318,7 +318,7 @@ void WTFPrintBacktrace(void** stack, int size)
 }
 
 #if !defined(NDEBUG) || !(OS(DARWIN) || PLATFORM(PLAYSTATION))
-void WTFCrash()
+NO_RETURN_DUE_TO_CRASH void WTFCrash()
 {
     WTFReportBacktrace();
 #if ASAN_ENABLED
@@ -332,6 +332,7 @@ void WTFCrash()
     ((void(*)())nullptr)();
 #endif // COMPILER(GCC_COMPATIBLE)
 #endif // ASAN_ENABLED
+    abort();
 }
 #else
 // We need to keep WTFCrash() around (even on non-debug OS(DARWIN) builds) as a workaround

@@ -452,17 +452,25 @@ public:
                 VALIDATE(value->type() == pointerType(), ("At ", *value));
                 break;
             case VectorExtractLane:
+                #if ENABLE(WEBASSEMBLY)
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() == 1, ("At ", *value));
                 VALIDATE(value->type() == toB3Type(Wasm::simdScalarType(value->asSIMDValue()->simdLane())), ("At ", *value));
                 VALIDATE(value->child(0)->type() == V128, ("At ", *value));
+                #else
+                VALIDATE(false, ("At ", *value));
+                #endif
                 break;
             case VectorReplaceLane:
+                #if ENABLE(WEBASSEMBLY)
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() == 2, ("At ", *value));
                 VALIDATE(value->type() == V128, ("At ", *value));
                 VALIDATE(value->child(0)->type() == V128, ("At ", *value));
                 VALIDATE(value->child(1)->type() == toB3Type(Wasm::simdScalarType(value->asSIMDValue()->simdLane())), ("At ", *value));
+                #else
+                VALIDATE(false, ("At ", *value));
+                #endif
                 break;
             case VectorDupElement:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
@@ -481,12 +489,15 @@ public:
                 break;
 
             case VectorSplat:
+                #if ENABLE(WEBASSEMBLY)
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() == 1, ("At ", *value));
                 VALIDATE(value->type() == V128, ("At ", *value));
                 VALIDATE(value->child(0)->type() == toB3Type(Wasm::simdScalarType(value->asSIMDValue()->simdLane())), ("At ", *value));
+                #else
+                VALIDATE(false, ("At ", *value));
+                #endif
                 break;
-
             case VectorPopcnt:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() == 1, ("At ", *value));

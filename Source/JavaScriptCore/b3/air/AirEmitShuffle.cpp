@@ -41,6 +41,7 @@ namespace AirEmitShuffleInternal {
 static constexpr bool verbose = false;
 }
 
+#pragma warning( disable : 4703 )
 template<typename Functor>
 Tmp findPossibleScratch(Code& code, Bank bank, const Functor& functor) {
     for (Reg reg : code.regsInPriorityOrder(bank)) {
@@ -49,6 +50,7 @@ Tmp findPossibleScratch(Code& code, Bank bank, const Functor& functor) {
             return tmp;
     }
     return Tmp();
+    #pragma warning( default : 4703 )
 }
 
 Tmp findPossibleScratch(Code& code, Bank bank, const Arg& arg1, const Arg& arg2) {

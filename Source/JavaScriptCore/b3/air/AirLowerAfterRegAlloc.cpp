@@ -52,6 +52,7 @@ static constexpr bool verbose = false;
     
 } // anonymous namespace
 
+#pragma warning( disable : 4703 )
 void lowerAfterRegAlloc(Code& code)
 {
     PhaseScope phaseScope(code, "lowerAfterRegAlloc");
@@ -292,6 +293,8 @@ void lowerAfterRegAlloc(Code& code)
 
     if (AirLowerAfterRegAllocInternal::verbose)
         dataLog("Code after lowerAfterRegAlloc:\n", code);
+
+    #pragma warning( default : 4703 )
 }
 
 } } } // namespace JSC::B3::Air
