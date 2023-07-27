@@ -2776,9 +2776,7 @@ macro updateBinaryArithProfile(size, opcodeStruct, type, scratch1, scratch2)
     orh type, (constexpr (BinaryArithProfileFixedVector::Storage::offsetOfData())) + BinaryArithProfile::m_bits[scratch2, scratch1, 2]
 end
 
-// FIXME: We should not need the X86_64_WIN condition here, since WEBASSEMBLY should already be false on Windows
-// https://bugs.webkit.org/show_bug.cgi?id=203716
-if WEBASSEMBLY and not X86_64_WIN
+if WEBASSEMBLY
 
 entry(wasm, macro()
     include InitWasm
@@ -2827,7 +2825,7 @@ _wasm_trampoline_wasm_tail_call_wide32:
 _wasm_trampoline_wasm_tail_call_indirect_wide32:
     crash()
 
-end # WEBASSEMBLY and not X86_64_WIN
+end # WEBASSEMBLY
 
 include? LowLevelInterpreterAdditions
 

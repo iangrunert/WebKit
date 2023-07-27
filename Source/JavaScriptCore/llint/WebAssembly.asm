@@ -31,7 +31,7 @@ if HAVE_FAST_TLS
     const WTF_WASM_CONTEXT_KEY = constexpr WTF_WASM_CONTEXT_KEY
 end
 
-if X86_64
+if X86_64 or X86_64_WIN
     const NumberOfWasmArgumentJSRs = 6
 elsif ARM64 or ARM64E or RISCV64
     const NumberOfWasmArgumentJSRs = 8
@@ -48,7 +48,7 @@ const NumberOfWasmArguments = NumberOfWasmArgumentJSRs + NumberOfWasmArgumentFPR
 # All callee saves must match the definition in WasmCallee.cpp
 
 # These must match the definition in WasmMemoryInformation.cpp
-if X86_64 or ARM64 or ARM64E or RISCV64
+if X86_64 or X86_64_WIN or ARM64 or ARM64E or RISCV64
     const wasmInstance = csr0
     const memoryBase = csr3
     const boundsCheckingSize = csr4
@@ -61,7 +61,7 @@ else
 end
 
 # This must match the definition in LowLevelInterpreter.asm
-if X86_64
+if X86_64 or X86_64_WIN
     const PB = csr2
 elsif ARM64 or ARM64E or RISCV64
     const PB = csr7
@@ -246,7 +246,7 @@ macro preserveCalleeSavesUsedByWasm()
     subp CalleeSaveSpaceStackAligned, sp
     if ARM64 or ARM64E
         storepairq wasmInstance, PB, -16[cfr]
-    elsif X86_64 or RISCV64
+    elsif X86_64 or X86_64_WIN or RISCV64
         storep PB, -0x8[cfr]
         storep wasmInstance, -0x10[cfr]
     elsif ARMv7
@@ -263,7 +263,7 @@ macro restoreCalleeSavesUsedByWasm()
     # to be observable within the same Wasm module.
     if ARM64 or ARM64E
         loadpairq -16[cfr], wasmInstance, PB
-    elsif X86_64 or RISCV64
+    elsif X86_64 or X86_64_WIN or RISCV64
         loadp -0x8[cfr], PB
         loadp -0x10[cfr], wasmInstance
     elsif ARMv7
@@ -277,7 +277,7 @@ end
 macro preserveGPRsUsedByTailCall(gpr0, gpr1)
     if ARM64 or ARM64E
         storepairq gpr0, gpr1, CodeBlock[sp]
-    elsif ARMv7 or X86_64 or RISCV64
+    elsif ARMv7 or X86_64 or X86_64_WIN or RISCV64
         storep gpr0, CodeBlock[sp]
         storep gpr1, Callee[sp]
     else
@@ -288,7 +288,7 @@ end
 macro restoreGPRsUsedByTailCall(gpr0, gpr1)
     if ARM64 or ARM64E
         loadpairq CodeBlock[sp], gpr0, gpr1
-    elsif ARMv7 or X86_64 or RISCV64
+    elsif ARMv7 or X86_64 or X86_64_WIN or RISCV64
         loadp CodeBlock[sp], gpr0
         loadp Callee[sp], gpr1
     else
@@ -297,7 +297,7 @@ macro restoreGPRsUsedByTailCall(gpr0, gpr1)
 end
 
 macro preserveReturnAddress(scratch)
-if X86_64
+if X86_64 or X86_64_WIN
     loadp ReturnPC[cfr], scratch
     storep scratch, ReturnPC[sp]
 elsif ARM64 or ARM64E or ARMv7 or RISCV64
@@ -308,7 +308,7 @@ end
 macro usePreviousFrame()
     if ARM64 or ARM64E
         loadpairq -PtrSize[cfr], PB, cfr
-    elsif ARMv7 or X86_64 or RISCV64
+    elsif ARMv7 or X86_64 or X86_64_WIN or RISCV64
         loadp -PtrSize[cfr], PB
         loadp [cfr], cfr
     else
@@ -1238,7 +1238,7 @@ end
             # ws1 is the new stack pointer.
             # cfr is the caller's caller's frame pointer.
 
-if X86_64
+if X86_64 or X86_64_WIN
             addp PtrSize, ws1, sp
 elsif ARMv7
             addp CallerFrameAndPCSize, ws1
@@ -1480,7 +1480,7 @@ end)
 
 wasmI64ToFOp(f32_convert_u_i64, WasmF32ConvertUI64, macro (ctx)
     mloadq(ctx, m_operand, t0)
-    if X86_64
+    if X86_64 or X86_64_WIN
         cq2f t0, t1, ft0
     else
         cq2f t0, ft0
@@ -1490,7 +1490,7 @@ end)
 
 wasmI64ToFOp(f64_convert_u_i64, WasmF64ConvertUI64, macro (ctx)
     mloadq(ctx, m_operand, t0)
-    if X86_64
+    if X86_64 or X86_64_WIN
         cq2d t0, t1, ft0
     else
         cq2d t0, ft0
