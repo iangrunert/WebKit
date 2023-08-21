@@ -1365,7 +1365,7 @@ class Instruction
         when "truncated"
             $asm.puts "roundsd $3, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
         when "truncatef2i"
-            $asm.puts "cvttss2si #{operands[0].x86Operand(:float)}, #{operands[1].x86Operand(:quad)}"
+            $asm.puts "cvttss2si #{orderOperands(operands[0].x86Operand(:float), operands[1].x86Operand(:quad))}"
         when "truncated2i"
             $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:quad)}"
         when "truncatef2q"
@@ -1373,7 +1373,7 @@ class Instruction
         when "truncated2q"
             truncateFloatingPointToQuad(:double)
         when "truncatef2is"
-            $asm.puts "cvttss2si #{operands[0].x86Operand(:float)}, #{operands[1].x86Operand(:int)}"
+            $asm.puts "cvttss2si #{orderOperands(operands[0].x86Operand(:float), operands[1].x86Operand(:int))}"
         when "truncatef2qs"
             $asm.puts "cvttss2si #{operands[0].x86Operand(:float)}, #{operands[1].x86Operand(:quad)}"
         when "truncated2is"
