@@ -71,6 +71,14 @@ else
     error
 end
 
+# Scratch register
+# ws1 isn't available on Windows, use csr5 which is only available on Windows
+if X86_64_WIN
+    const wasmScratchRegister = csr5
+else
+    const wasmScratchRegister = ws1
+end
+
 # Helper macros
 
 # On JSVALUE64, each 64-bit argument GPR holds one whole Wasm value.
@@ -189,8 +197,8 @@ end
             restoreCalleeSavesUsedByWasm()
             restoreCallerPCAndCFR()
             if ARM64E
-                leap _g_config, ws1
-                jmp JSCConfigGateMapOffset + (constexpr Gate::wasmOSREntry) * PtrSize[ws1], NativeToJITGatePtrTag # WasmEntryPtrTag
+                leap _g_config, wasmScratchRegister
+                jmp JSCConfigGateMapOffset + (constexpr Gate::wasmOSREntry) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # WasmEntryPtrTag
             else
                 jmp ws0, WasmEntryPtrTag
             end
@@ -217,8 +225,8 @@ macro checkSwitchToJITForLoop()
             move r0, a0
             if ARM64E
                 move r1, ws0
-                leap _g_config, ws1
-                jmp JSCConfigGateMapOffset + (constexpr Gate::wasmOSREntry) * PtrSize[ws1], NativeToJITGatePtrTag # WasmEntryPtrTag
+                leap _g_config, wasmScratchRegister
+                jmp JSCConfigGateMapOffset + (constexpr Gate::wasmOSREntry) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # WasmEntryPtrTag
             else
                 jmp r1, WasmEntryPtrTag
             end
@@ -350,15 +358,15 @@ macro callWasmCallSlowPath(slowPath, action)
 end
 
 macro restoreStackPointerAfterCall()
-    loadp WasmCodeBlock[cfr], ws1
-    loadi Wasm::LLIntCallee::m_numCalleeLocals[ws1], ws1
-    lshiftp 3, ws1
-    addp maxFrameExtentForSlowPathCall, ws1
+    loadp WasmCodeBlock[cfr], wasmScratchRegister
+    loadi Wasm::LLIntCallee::m_numCalleeLocals[wasmScratchRegister], wasmScratchRegister
+    lshiftp 3, wasmScratchRegister
+    addp maxFrameExtentForSlowPathCall, wasmScratchRegister
 if ARMv7
-    subp cfr, ws1, ws1
-    move ws1, sp
+    subp cfr, wasmScratchRegister, wasmScratchRegister
+    move wasmScratchRegister, sp
 else
-    subp cfr, ws1, sp
+    subp cfr, wasmScratchRegister, sp
 end
 end
 
@@ -366,36 +374,36 @@ macro wasmPrologue()
     # Set up the call frame and check if we should OSR.
     preserveCallerPCAndCFR()
     preserveCalleeSavesUsedByWasm()
-    reloadMemoryRegistersFromInstance(wasmInstance, ws0, ws1)
+    reloadMemoryRegistersFromInstance(wasmInstance, ws0, wasmScratchRegister)
 
     storep wasmInstance, CodeBlock[cfr]
     loadp Callee[cfr], ws0
 if JSVALUE64
     andp ~(constexpr JSValue::NativeCalleeTag), ws0
 end
-    leap WTFConfig + constexpr WTF::offsetOfWTFConfigLowestAccessibleAddress, ws1
-    loadp [ws1], ws1
-    addp ws1, ws0
+    leap WTFConfig + constexpr WTF::offsetOfWTFConfigLowestAccessibleAddress, wasmScratchRegister
+    loadp [wasmScratchRegister], wasmScratchRegister
+    addp wasmScratchRegister, ws0
     storep ws0, WasmCodeBlock[cfr]
 
-    # Get new sp in ws1 and check stack height.
-    loadi Wasm::LLIntCallee::m_numCalleeLocals[ws0], ws1
-    lshiftp 3, ws1
-    addp maxFrameExtentForSlowPathCall, ws1
-    subp cfr, ws1, ws1
+    # Get new sp in wasmScratchRegister and check stack height.
+    loadi Wasm::LLIntCallee::m_numCalleeLocals[ws0], wasmScratchRegister
+    lshiftp 3, wasmScratchRegister
+    addp maxFrameExtentForSlowPathCall, wasmScratchRegister
+    subp cfr, wasmScratchRegister, wasmScratchRegister
 
 if not JSVALUE64
-    subp 8, ws1 # align stack pointer
+    subp 8, wasmScratchRegister # align stack pointer
 end
 
-    bpa ws1, cfr, .stackOverflow
-    bpbeq Wasm::Instance::m_softStackLimit[wasmInstance], ws1, .stackHeightOK
+    bpa wasmScratchRegister, cfr, .stackOverflow
+    bpbeq Wasm::Instance::m_softStackLimit[wasmInstance], wasmScratchRegister, .stackHeightOK
 
 .stackOverflow:
     throwException(StackOverflow)
 
 .stackHeightOK:
-    move ws1, sp
+    move wasmScratchRegister, sp
 
 if ARM64 or ARM64E
     forEachArgumentJSR(macro (offset, gpr1, gpr2)
@@ -427,19 +435,19 @@ end
     loadp Wasm::LLIntCallee::m_instructionsRawPointer[ws0], PB
     move 0, PC
 
-    loadi Wasm::LLIntCallee::m_numVars[ws0], ws1
-    subi NumberOfWasmArguments + CalleeSaveSpaceAsVirtualRegisters, ws1
-    btiz ws1, .zeroInitializeLocalsDone
-    lshifti 3, ws1
-    negi ws1
+    loadi Wasm::LLIntCallee::m_numVars[ws0], wasmScratchRegister
+    subi NumberOfWasmArguments + CalleeSaveSpaceAsVirtualRegisters, wasmScratchRegister
+    btiz wasmScratchRegister, .zeroInitializeLocalsDone
+    lshifti 3, wasmScratchRegister
+    negi wasmScratchRegister
 if JSVALUE64
-    sxi2q ws1, ws1
+    sxi2q wasmScratchRegister, wasmScratchRegister
 end
     leap (NumberOfWasmArguments + CalleeSaveSpaceAsVirtualRegisters + 1) * -8[cfr], ws0
 .zeroInitializeLocalsLoop:
-    addp PtrSize, ws1
-    storep 0, [ws0, ws1]
-    btpnz ws1, .zeroInitializeLocalsLoop
+    addp PtrSize, wasmScratchRegister
+    storep 0, [ws0, wasmScratchRegister]
+    btpnz wasmScratchRegister, .zeroInitializeLocalsLoop
 .zeroInitializeLocalsDone:
 end
 
@@ -460,37 +468,37 @@ macro wasmPrologueSIMD()
 if WEBASSEMBLY_B3JIT and not ARMv7
     preserveCallerPCAndCFR()
     preserveCalleeSavesUsedByWasm()
-    reloadMemoryRegistersFromInstance(wasmInstance, ws0, ws1)
+    reloadMemoryRegistersFromInstance(wasmInstance, ws0, wasmScratchRegister)
 
     storep wasmInstance, CodeBlock[cfr]
     loadp Callee[cfr], ws0
 if JSVALUE64
     andp ~(constexpr JSValue::NativeCalleeTag), ws0
 end
-    leap WTFConfig + constexpr WTF::offsetOfWTFConfigLowestAccessibleAddress, ws1
-    loadp [ws1], ws1
-    addp ws1, ws0
+    leap WTFConfig + constexpr WTF::offsetOfWTFConfigLowestAccessibleAddress, wasmScratchRegister
+    loadp [wasmScratchRegister], wasmScratchRegister
+    addp wasmScratchRegister, ws0
     storep ws0, WasmCodeBlock[cfr]
 
-    # Get new sp in ws1 and check stack height.
+    # Get new sp in wasmScratchRegister and check stack height.
     # This should match the calculation of m_stackSize, but with double the size for fpr arg storage and no locals.
-    move 8 + 8 * 2 + constexpr CallFrame::headerSizeInRegisters + 1, ws1
-    lshiftp 3, ws1
-    addp maxFrameExtentForSlowPathCall, ws1
-    subp cfr, ws1, ws1
+    move 8 + 8 * 2 + constexpr CallFrame::headerSizeInRegisters + 1, wasmScratchRegister
+    lshiftp 3, wasmScratchRegister
+    addp maxFrameExtentForSlowPathCall, wasmScratchRegister
+    subp cfr, wasmScratchRegister, wasmScratchRegister
 
 if not JSVALUE64
-    subp 8, ws1 # align stack pointer
+    subp 8, wasmScratchRegister # align stack pointer
 end
 
-    bpa ws1, cfr, .stackOverflow
-    bpbeq Wasm::Instance::m_softStackLimit[wasmInstance], ws1, .stackHeightOK
+    bpa wasmScratchRegister, cfr, .stackOverflow
+    bpbeq Wasm::Instance::m_softStackLimit[wasmInstance], wasmScratchRegister, .stackHeightOK
 
 .stackOverflow:
     throwException(StackOverflow)
 
 .stackHeightOK:
-    move ws1, sp
+    move wasmScratchRegister, sp
 
 if ARM64 or ARM64E
     forEachArgumentJSR(macro (offset, gpr1, gpr2)
@@ -537,8 +545,8 @@ end
     restoreCalleeSavesUsedByWasm()
     restoreCallerPCAndCFR()
     if ARM64E
-        leap _g_config, ws1
-        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmOSREntry) * PtrSize[ws1], NativeToJITGatePtrTag # WasmEntryPtrTag
+        leap _g_config, wasmScratchRegister
+        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmOSREntry) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # WasmEntryPtrTag
     else
         jmp ws0, WasmEntryPtrTag
     end
@@ -613,10 +621,10 @@ macro loadConstantOrVariable(ctx, index, loader)
         loader([cfr, index, 8])
         jmp .done
     .constant:
-        loadp WasmCodeBlock[cfr], t6
-        loadp Wasm::LLIntCallee::m_constants[t6], t6
+        loadp WasmCodeBlock[cfr], wasmScratchRegister
+        loadp Wasm::LLIntCallee::m_constants[wasmScratchRegister], wasmScratchRegister
         subp firstConstantIndex, index
-        loader((constexpr (Int64FixedVector::Storage::offsetOfData()))[t6, index, 8])
+        loader((constexpr (Int64FixedVector::Storage::offsetOfData()))[wasmScratchRegister, index, 8])
     .done:
     end)
 end
@@ -835,7 +843,7 @@ slowWasmOp(struct_set)
 
 wasmOp(grow_memory, WasmGrowMemory, macro(ctx)
     callWasmSlowPath(_slow_path_wasm_grow_memory)
-    reloadMemoryRegistersFromInstance(wasmInstance, ws0, ws1)
+    reloadMemoryRegistersFromInstance(wasmInstance, ws0, wasmScratchRegister)
     dispatch(ctx)
 end)
 
@@ -860,12 +868,12 @@ _wasm_enter:
 if JSVALUE64
     sxi2q t2, t2
 end
-    move 0, t6
+    move 0, wasmScratchRegister
 .opEnterLoop:
 if JSVALUE64
-    storeq t6, [t1, t2]
+    storeq wasmScratchRegister, [t1, t2]
 else
-    store2ia t6, t6, [t1, t2]
+    store2ia wasmScratchRegister, wasmScratchRegister, [t1, t2]
 end
     addp 8, t2
     btpnz t2, .opEnterLoop
@@ -980,16 +988,16 @@ macro slowPathForWasmCall(ctx, slowPath, storeWasmInstance)
             # the call might throw (e.g. indirect call with bad signature)
             btpz targetWasmInstance, .throw
 
-            wgetu(ctx, m_stackOffset, ws1)
-            lshifti 3, ws1
+            wgetu(ctx, m_stackOffset, wasmScratchRegister)
+            lshifti 3, wasmScratchRegister
 if ARMv7
-            subp cfr, ws1, ws1
-            move ws1, sp
+            subp cfr, wasmScratchRegister, wasmScratchRegister
+            move wasmScratchRegister, sp
 else
-            subp cfr, ws1, sp
+            subp cfr, wasmScratchRegister, sp
 end
 
-            wgetu(ctx, m_numberOfStackArgs, ws1)
+            wgetu(ctx, m_numberOfStackArgs, wasmScratchRegister)
 
             # Preserve the current instance
             move wasmInstance, PB
@@ -1001,26 +1009,26 @@ end
 
             # Load registers from stack
 if ARM64 or ARM64E
-            leap [sp, ws1, 8], ws1
+            leap [sp, wasmScratchRegister, 8], wasmScratchRegister
             forEachArgumentJSR(macro (offset, gpr1, gpr2)
-                loadpairq CallFrameHeaderSize + 8 + offset[ws1], gpr1, gpr2
+                loadpairq CallFrameHeaderSize + 8 + offset[wasmScratchRegister], gpr1, gpr2
             end)
 elsif JSVALUE64
             forEachArgumentJSR(macro (offset, gpr)
-                loadq CallFrameHeaderSize + 8 + offset[sp, ws1, 8], gpr
+                loadq CallFrameHeaderSize + 8 + offset[sp, wasmScratchRegister, 8], gpr
             end)
 else
             forEachArgumentJSR(macro (offset, gprMsw, gpLsw)
-                load2ia CallFrameHeaderSize + 8 + offset[sp, ws1, 8], gpLsw, gprMsw
+                load2ia CallFrameHeaderSize + 8 + offset[sp, wasmScratchRegister, 8], gpLsw, gprMsw
             end)
 end
 if ARM64 or ARM64E
             forEachArgumentFPR(macro (offset, fpr1, fpr2)
-                loadpaird CallFrameHeaderSize + 8 + offset[ws1], fpr1, fpr2
+                loadpaird CallFrameHeaderSize + 8 + offset[wasmScratchRegister], fpr1, fpr2
             end)
 else
             forEachArgumentFPR(macro (offset, fpr)
-                loadd CallFrameHeaderSize + 8 + offset[sp, ws1, 8], fpr
+                loadd CallFrameHeaderSize + 8 + offset[sp, wasmScratchRegister, 8], fpr
             end)
 end
             addp CallerFrameAndPCSize, sp
@@ -1028,8 +1036,8 @@ end
             ctx(macro(opcodeName, opcodeStruct, size)
                 macro callNarrow()
                     if ARM64E
-                        leap _g_config, ws1
-                        jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%) * PtrSize[ws1], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
+                        leap _g_config, wasmScratchRegister
+                        jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
                     end
                     _wasm_trampoline_%opcodeName%:
                     call ws0, JSEntrySlowPathPtrTag
@@ -1037,8 +1045,8 @@ end
 
                 macro callWide16()
                     if ARM64E
-                        leap _g_config, ws1
-                        jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%_wide16) * PtrSize[ws1], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
+                        leap _g_config, wasmScratchRegister
+                        jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%_wide16) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
                     end
                     _wasm_trampoline_%opcodeName%_wide16:
                     call ws0, JSEntrySlowPathPtrTag
@@ -1046,8 +1054,8 @@ end
 
                 macro callWide32()
                     if ARM64E
-                        leap _g_config, ws1
-                        jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%_wide32) * PtrSize[ws1], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
+                        leap _g_config, wasmScratchRegister
+                        jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%_wide32) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
                     end
                     _wasm_trampoline_%opcodeName%_wide32:
                     call ws0, JSEntrySlowPathPtrTag
@@ -1071,13 +1079,13 @@ end
             loadp WasmCodeBlock[cfr], PB
             loadp Wasm::LLIntCallee::m_instructionsRawPointer[PB], PB
 
-            wgetu(ctx, m_stackOffset, ws1)
-            lshifti 3, ws1
-            negi ws1
+            wgetu(ctx, m_stackOffset, wasmScratchRegister)
+            lshifti 3, wasmScratchRegister
+            negi wasmScratchRegister
 if JSVALUE64
-            sxi2q ws1, ws1
+            sxi2q wasmScratchRegister, wasmScratchRegister
 end
-            addp cfr, ws1
+            addp cfr, wasmScratchRegister
 
             # Argument registers are also return registers, so they must be stored to the stack
             # in case they contain return values.
@@ -1088,33 +1096,33 @@ else
             move memoryBase, PC
 end
 if ARM64 or ARM64E
-            leap [ws1, ws0, 8], ws1
+            leap [wasmScratchRegister, ws0, 8], wasmScratchRegister
             forEachArgumentJSR(macro (offset, gpr1, gpr2)
-                storepairq gpr1, gpr2, CallFrameHeaderSize + 8 + offset[ws1]
+                storepairq gpr1, gpr2, CallFrameHeaderSize + 8 + offset[wasmScratchRegister]
             end)
 elsif JSVALUE64
             forEachArgumentJSR(macro (offset, gpr)
-                storeq gpr, CallFrameHeaderSize + 8 + offset[ws1, ws0, 8]
+                storeq gpr, CallFrameHeaderSize + 8 + offset[wasmScratchRegister, ws0, 8]
             end)
 else
             forEachArgumentJSR(macro (offset, gprMsw, gpLsw)
-                store2ia gpLsw, gprMsw, CallFrameHeaderSize + 8 + offset[ws1, ws0, 8]
+                store2ia gpLsw, gprMsw, CallFrameHeaderSize + 8 + offset[wasmScratchRegister, ws0, 8]
             end)
 end
 if ARM64 or ARM64E
             forEachArgumentFPR(macro (offset, fpr1, fpr2)
-                storepaird fpr1, fpr2, CallFrameHeaderSize + 8 + offset[ws1]
+                storepaird fpr1, fpr2, CallFrameHeaderSize + 8 + offset[wasmScratchRegister]
             end)
 else
             forEachArgumentFPR(macro (offset, fpr)
-                stored fpr, CallFrameHeaderSize + 8 + offset[ws1, ws0, 8]
+                stored fpr, CallFrameHeaderSize + 8 + offset[wasmScratchRegister, ws0, 8]
             end)
 end
 
             loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
 
             storeWasmInstance(wasmInstance)
-            reloadMemoryRegistersFromInstance(wasmInstance, ws0, ws1)
+            reloadMemoryRegistersFromInstance(wasmInstance, ws0, wasmScratchRegister)
 
             dispatch(ctx)
 
@@ -1136,43 +1144,43 @@ macro slowPathForWasmTailCall(ctx, slowPath, storeWasmInstance, restoreCalleeSav
             # the call might throw (e.g. indirect call with bad signature)
             btpz targetWasmInstance, .throw
 
-            wgetu(ctx, m_stackOffset, ws1)
-            muli SlotSize, ws1
+            wgetu(ctx, m_stackOffset, wasmScratchRegister)
+            muli SlotSize, wasmScratchRegister
 
 if ARMv7
-            subp cfr, ws1, ws1
-            move ws1, sp
+            subp cfr, wasmScratchRegister, wasmScratchRegister
+            move wasmScratchRegister, sp
 else
-            subp cfr, ws1, sp
+            subp cfr, wasmScratchRegister, sp
 end
 
             storeWasmInstance(targetWasmInstance)
             reloadMemoryRegistersFromInstance(targetWasmInstance, wa0, wa1)
 
-            wgetu(ctx, m_numberOfCalleeStackArgs, ws1)
+            wgetu(ctx, m_numberOfCalleeStackArgs, wasmScratchRegister)
 
             # We make sure arguments registers are loaded from the stack before shuffling the frame.
 if ARM64 or ARM64E
-            leap [sp, ws1, 8], ws1
+            leap [sp, wasmScratchRegister, 8], wasmScratchRegister
             forEachArgumentJSR(macro (offset, gpr1, gpr2)
-                loadpairq CallFrameHeaderSize + 8 + offset[ws1], gpr1, gpr2
+                loadpairq CallFrameHeaderSize + 8 + offset[wasmScratchRegister], gpr1, gpr2
             end)
 elsif JSVALUE64
             forEachArgumentJSR(macro (offset, gpr)
-                loadq CallFrameHeaderSize + 8 + offset[sp, ws1, 8], gpr
+                loadq CallFrameHeaderSize + 8 + offset[sp, wasmScratchRegister, 8], gpr
             end)
 else
             forEachArgumentJSR(macro (offset, gprMsw, gpLsw)
-                load2ia CallFrameHeaderSize + 8 + offset[sp, ws1, 8], gpLsw, gprMsw
+                load2ia CallFrameHeaderSize + 8 + offset[sp, wasmScratchRegister, 8], gpLsw, gprMsw
             end)
 end
 if ARM64 or ARM64E
             forEachArgumentFPR(macro (offset, fpr1, fpr2)
-                loadpaird CallFrameHeaderSize + 8 + offset[ws1], fpr1, fpr2
+                loadpaird CallFrameHeaderSize + 8 + offset[wasmScratchRegister], fpr1, fpr2
             end)
 else
             forEachArgumentFPR(macro (offset, fpr)
-                loadd CallFrameHeaderSize + 8 + offset[sp, ws1, 8], fpr
+                loadd CallFrameHeaderSize + 8 + offset[sp, wasmScratchRegister, 8], fpr
             end)
 end
 
@@ -1182,7 +1190,7 @@ end
             preserveGPRsUsedByTailCall(wa0, wa1)
 
             # Preserve PC
-            move PC, ws1
+            move PC, wasmScratchRegister
 
             # Reload PC
             loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
@@ -1204,13 +1212,13 @@ end
             subp wa1, wa0
 
             # Restore PC
-            move ws1, PC
+            move wasmScratchRegister, PC
 
             restoreCalleeSavesPreservedByCaller()
 if ARM64E
             addp CallerFrameAndPCSize, cfr, ws2
 end
-            preserveReturnAddress(ws1)
+            preserveReturnAddress(wasmScratchRegister)
             usePreviousFrame()
 
 if ARMv7
@@ -1219,32 +1227,32 @@ end
             .copyLoop:
 if JSVALUE64
              subi MachineRegisterSize, wa1
-             loadq [sp, wa1, 1], ws1
-             storeq ws1, [wa0, wa1, 1]
+             loadq [sp, wa1, 1], wasmScratchRegister
+             storeq wasmScratchRegister, [wa0, wa1, 1]
 else
              subi PtrSize, wa1
-             loadp [sp, wa1, 1], ws1
-             storep ws1, [wa0, wa1, 1]
+             loadp [sp, wa1, 1], wasmScratchRegister
+             storep wasmScratchRegister, [wa0, wa1, 1]
 end
              btinz wa1, .copyLoop
 
-            move wa0, ws1
+            move wa0, wasmScratchRegister
             loadp Wasm::Instance::m_owner[wasmInstance], wa0
             storep wa0, ThisArgumentOffset[sp] # Anchor new JSWebAssemblyInstance in ThisArgumentOffset.
 
             restoreGPRsUsedByTailCall(wa0, wa1)
 
             # We are done copying the callee's stack arguments to their final position.
-            # ws1 is the new stack pointer.
+            # wasmScratchRegister is the new stack pointer.
             # cfr is the caller's caller's frame pointer.
 
 if X86_64 or X86_64_WIN
-            addp PtrSize, ws1, sp
+            addp PtrSize, wasmScratchRegister, sp
 elsif ARMv7
-            addp CallerFrameAndPCSize, ws1
-            move ws1, sp
+            addp CallerFrameAndPCSize, wasmScratchRegister
+            move wasmScratchRegister, sp
 elsif ARM64 or ARM64E or RISCV64
-            addp CallerFrameAndPCSize, ws1, sp
+            addp CallerFrameAndPCSize, wasmScratchRegister, sp
 else
             error
 end
@@ -1252,8 +1260,8 @@ end
             ctx(macro(opcodeName, opcodeStruct, size)
                 macro jumpNarrow()
                     if ARM64E
-                        leap _g_config, ws1
-                        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmTailCallJSEntrySlowPathPtrTag) * PtrSize[ws1], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
+                        leap _g_config, wasmScratchRegister
+                        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmTailCallJSEntrySlowPathPtrTag) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
                     end
                     _wasm_trampoline_%opcodeName%:
                     jmp ws0, JSEntrySlowPathPtrTag
@@ -1261,8 +1269,8 @@ end
 
                 macro jumpWide16()
                     if ARM64E
-                        leap _g_config, ws1
-                        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmTailCallJSEntrySlowPathPtrTag) * PtrSize[ws1], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
+                        leap _g_config, wasmScratchRegister
+                        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmTailCallJSEntrySlowPathPtrTag) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
                     end
                     _wasm_trampoline_%opcodeName%_wide16:
                     jmp ws0, JSEntrySlowPathPtrTag
@@ -1270,8 +1278,8 @@ end
 
                 macro jumpWide32()
                     if ARM64E
-                        leap _g_config, ws1
-                        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmTailCallJSEntrySlowPathPtrTag) * PtrSize[ws1], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
+                        leap _g_config, wasmScratchRegister
+                        jmp JSCConfigGateMapOffset + (constexpr Gate::wasmTailCallJSEntrySlowPathPtrTag) * PtrSize[wasmScratchRegister], NativeToJITGatePtrTag # JSEntrySlowPathPtrTag
                     end
                     _wasm_trampoline_%opcodeName%_wide32:
                     jmp ws0, JSEntrySlowPathPtrTag
@@ -2054,11 +2062,11 @@ end
 .copyLoop:
     btiz keep, .done
 if JSVALUE64
-    loadq [startOffset, drop, 8], t6
-    storeq t6, [startOffset]
+    loadq [startOffset, drop, 8], wasmScratchRegister
+    storeq wasmScratchRegister, [startOffset]
 else
-    load2ia [startOffset, drop, 8], t5, t6
-    store2ia t5, t6, [startOffset]
+    load2ia [startOffset, drop, 8], t5, wasmScratchRegister
+    store2ia t5, wasmScratchRegister, [startOffset]
 end
     subi 1, keep
     subp 8, startOffset
@@ -2110,7 +2118,7 @@ macro commonCatchImpl(ctx)
     restoreStackPointerAfterCall()
 
     loadp CodeBlock[cfr], wasmInstance
-    reloadMemoryRegistersFromInstance(wasmInstance, ws0, ws1)
+    reloadMemoryRegistersFromInstance(wasmInstance, ws0, wasmScratchRegister)
 
     loadp WasmCodeBlock[cfr], PB
     loadp Wasm::LLIntCallee::m_instructionsRawPointer[PB], PB
@@ -2134,11 +2142,11 @@ commonWasmOp(wasm_catch, WasmCatch, macro() end, macro(ctx)
 .copyLoop:
     btiz t3, .done
 if JSVALUE64
-    loadq [t1], t6
-    storeq t6, [t2]
+    loadq [t1], wasmScratchRegister
+    storeq wasmScratchRegister, [t2]
 else
-    load2ia [t1], t5, t6
-    store2ia t5, t6, [t2]
+    load2ia [t1], t5, wasmScratchRegister
+    store2ia t5, wasmScratchRegister, [t2]
 end
     subi 1, t3
     # FIXME: Use arm store-add/sub instructions in wasm LLInt catch
