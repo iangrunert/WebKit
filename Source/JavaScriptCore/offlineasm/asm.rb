@@ -252,13 +252,13 @@ class Assembler
                 @outp.puts(formatDump("OFFLINE_ASM_OPCODE_LABEL(op_#{$~.post_match})", lastComment))
             else
                 label = "llint_" + "op_#{$~.post_match}"
-                @outp.puts(formatDump("  _#{label}:", lastComment))
+                @outp.puts(formatDump("  _#{label}::", lastComment))
             end            
         else
             if !$emitWinAsm
                 @outp.puts(formatDump("OFFLINE_ASM_GLUE_LABEL(#{labelName})", lastComment))
             else
-                @outp.puts(formatDump("  _#{labelName}:", lastComment))
+                @outp.puts(formatDump("  _#{labelName}::", lastComment))
             end
         end
         if $emitELFDebugDirectives

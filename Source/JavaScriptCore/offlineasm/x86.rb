@@ -139,6 +139,20 @@ def const(c)
     isIntelSyntax ? "#{c}" : "$#{c}"
 end
 
+def const0x(c, kind)
+    if !isIntelSyntax
+        "$#{c}"
+    end
+    case kind
+    when :half
+        "#{c}h"
+    when :quad
+        "#{c}h"
+    else
+        raise "bad kind for constant #{c} kind #{kind}"
+    end
+end
+
 def getSizeString(kind)
     if !isIntelSyntax
         return ""
@@ -208,7 +222,7 @@ def x86GPRName(name, kind)
         raise "bad GPR name #{name} in 32-bit X86" unless isX64
         case kind
         when :byte
-            return register(name)
+            return register(name + "b")
         when :half
             return register(name + "w")
         when :int
@@ -792,7 +806,7 @@ class Instruction
                 end
 
                 isUnordered = LocalLabel.unique("isUnordered")
-                $asm.puts "movq $0, #{target.x86Operand(:quad)}"
+                $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(const(0), target.x86Operand(:quad))}"
                 compare.call(right, left)
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
                 handleX86Set("sete", target)
@@ -806,7 +820,7 @@ class Instruction
                 end
 
                 isUnordered = LocalLabel.unique("isUnordered")
-                $asm.puts "movq $1, #{target.x86Operand(:quad)}"
+                $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(const(1), target.x86Operand(:quad))}"
                 compare.call(right, left);
                 $asm.puts "jp #{LocalLabelReference.new(codeOrigin, isUnordered).asmLabel}"
                 handleX86Set("setne", target)
@@ -1354,21 +1368,53 @@ class Instruction
         when "sqrtd"
             $asm.puts "sqrtsd #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
         when "roundf"
-            $asm.puts "roundss $0, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundss #{const(0)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundss #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(0)}"
+            end
         when "roundd"
-            $asm.puts "roundsd $0, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundsd #{const(0)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundsd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(0)}"
+            end
         when "floorf"
-            $asm.puts "roundss $1, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundss #{const(1)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundss #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(1)}"
+            end
         when "floord"
-            $asm.puts "roundsd $1, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundsd #{const(1)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundsd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(1)}"
+            end
         when "ceilf"
-            $asm.puts "roundss $2, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundss #{const(2)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundss #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(2)}"
+            end
         when "ceild"
-            $asm.puts "roundsd $2, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundsd #{const(2)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundsd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(2)}"
+            end
         when "truncatef"
-            $asm.puts "roundss $3, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundss #{const(3)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundss #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(3)}"
+            end
         when "truncated"
-            $asm.puts "roundsd $3, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            if !isIntelSyntax
+                $asm.puts "roundsd #{const(3)}, #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
+            else
+                $asm.puts "roundsd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}, #{const(3)}"
+            end
         when "truncatef2i"
             $asm.puts "cvttss2si #{orderOperands(operands[0].x86Operand(:float), operands[1].x86Operand(:quad))}"
         when "truncated2i"
@@ -1485,7 +1531,7 @@ class Instruction
             handleX86FPBranch(:float, "jbe", :normal)
         when "btd2i"
             $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
-            $asm.puts "cmpl $0x80000000 #{operands[1].x86Operand(:int)}"
+            $asm.puts "cmpl #{const0x('80000000', :half)} #{operands[1].x86Operand(:int)}"
             $asm.puts "je #{operands[2].asmLabel}"
         when "td2i"
             $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
@@ -1931,19 +1977,19 @@ class Instruction
                 $asm.puts "lock; orl $0, (#{sp.x86Operand(:ptr)})"
             end
         when "absf"
-            $asm.puts "mov#{x86Suffix(:int)} #{orderOperands("$0x80000000", X64_SCRATCH_REGISTER.x86Operand(:int))}"
+            $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(const0x("80000000", :half), X64_SCRATCH_REGISTER.x86Operand(:int))}"
             $asm.puts "movd #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:int), operands[1].x86Operand(:float))}"
             $asm.puts "andnps #{orderOperands(operands[0].x86Operand(:float), operands[1].x86Operand(:float))}"
         when "absd"
-            $asm.puts "movq #{orderOperands("$0x8000000000000000", X64_SCRATCH_REGISTER.x86Operand(:quad))}"
+            $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(const0x("8000000000000000", :quad), X64_SCRATCH_REGISTER.x86Operand(:quad))}"
             $asm.puts "movd #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:quad), operands[1].x86Operand(:double))}"
             $asm.puts "andnps #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
         when "negf"
-            $asm.puts "mov#{x86Suffix(:int)} #{orderOperands("$0x80000000", X64_SCRATCH_REGISTER.x86Operand(:int))}"
+            $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(const0x("80000000", :half), X64_SCRATCH_REGISTER.x86Operand(:int))}"
             $asm.puts "movd #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:int), operands[1].x86Operand(:float))}"
             $asm.puts "xorps #{orderOperands(operands[0].x86Operand(:float), operands[1].x86Operand(:float))}"
         when "negd"
-            $asm.puts "movq #{orderOperands("$0x8000000000000000", X64_SCRATCH_REGISTER.x86Operand(:quad))}"
+            $asm.puts "mov#{x86Suffix(:quad)} #{orderOperands(const0x("8000000000000000", :quad), X64_SCRATCH_REGISTER.x86Operand(:quad))}"
             $asm.puts "movd #{orderOperands(X64_SCRATCH_REGISTER.x86Operand(:quad), operands[1].x86Operand(:double))}"
             $asm.puts "xorpd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
         when "tls_loadp"
