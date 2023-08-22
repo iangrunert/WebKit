@@ -289,8 +289,6 @@ auto StreamingParser::addBytes(const uint8_t* bytes, size_t bytesSize, IsEndOfSt
             dumpWasmSource(m_buffer);
         }
     }
-#else
-    (void) dumpWasmSource;
 #endif
     if (m_state == State::FatalError)
         return m_state;

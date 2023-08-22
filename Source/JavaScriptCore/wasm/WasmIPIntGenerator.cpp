@@ -26,7 +26,8 @@
 #include "config.h"
 #include "WasmIPIntGenerator.h"
 
-#if ENABLE(WEBASSEMBLY)
+// Disabling the in-place interpreter on Windows
+#if ENABLE(WEBASSEMBLY) && OS(UNIX)
 
 #include "BytecodeGeneratorBaseInlines.h"
 #include "BytecodeStructs.h"
