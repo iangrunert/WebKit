@@ -333,7 +333,7 @@ const OpcodeIDWide16SizeWasm = 2 # Wide16 Prefix + OpcodeID(1 byte)
 const OpcodeIDWide32SizeWasm = 2 # Wide32 Prefix + OpcodeID(1 byte)
 
 if X86_64_WIN or C_LOOP_WIN
-    const WTFConfig = _g_wtfConfig
+    const WTFConfig = ___imp_g_wtfConfig
     const GigacageConfig = _g_gigacageConfig
     const JSCConfig = _g_jscConfig
 else

@@ -227,7 +227,6 @@ MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
     std::call_once(onceKey, [&] {
         JSInterfaceJIT jit;
         void* ptr = reinterpret_cast<void*>(ipint_entry);
-        // TODO Look at LLIntdata.h, this needs to be different #if COMPILER(MSVC)
 #if COMPILER(MSVC)
         void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).untaggedPtr();
 #else
