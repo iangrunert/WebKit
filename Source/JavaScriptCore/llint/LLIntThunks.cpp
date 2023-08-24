@@ -266,7 +266,11 @@ MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunkSIMD()
     std::call_once(onceKey, [&] {
         JSInterfaceJIT jit;
         void* ptr = reinterpret_cast<void*>(ipint_entry_simd);
+#if COMPILER(MSVC)
+        void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).untaggedPtr();
+#else
         void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr();
+#endif
         void* retagged = nullptr;
 #if ENABLE(JIT_CAGE)
         if (Options::useJITCage())
