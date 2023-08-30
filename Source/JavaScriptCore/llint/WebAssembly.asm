@@ -257,9 +257,6 @@ macro preserveCalleeSavesUsedByWasm()
     elsif X86_64 or X86_64_WIN or RISCV64
         storep PB, -0x8[cfr]
         storep wasmInstance, -0x10[cfr]
-        if X86_64_WIN
-            storep wasmScratchRegister, -0x18[cfr]
-        end
     elsif ARMv7
         storep PB, -4[cfr]
         storep wasmInstance, -8[cfr]
@@ -277,9 +274,6 @@ macro restoreCalleeSavesUsedByWasm()
     elsif X86_64 or X86_64_WIN or RISCV64
         loadp -0x8[cfr], PB
         loadp -0x10[cfr], wasmInstance
-        if X86_64_WIN
-            loadp -0x18[cfr], wasmScratchRegister
-        end
     elsif ARMv7
         loadp -4[cfr], PB
         loadp -8[cfr], wasmInstance
