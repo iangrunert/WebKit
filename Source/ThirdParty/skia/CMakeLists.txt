@@ -815,6 +815,7 @@ if (WIN32)
         src/utils/win/SkDWrite.cpp
         src/utils/win/SkDWriteFontFileStream.cpp
         src/utils/win/SkDWriteGeometrySink.cpp
+        src/utils/win/SkHRESULT.cpp
     )
 else ()
     target_sources(Skia PRIVATE

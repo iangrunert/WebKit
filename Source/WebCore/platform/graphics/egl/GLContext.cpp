@@ -311,7 +311,7 @@ std::unique_ptr<GLContext> GLContext::createSharing(PlatformDisplay& platformDis
     return GLContext::create(platformDisplay.glDisplay(), targetForPlatformDisplay(platformDisplay));
 }
 
-#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+#if !LOG_DISABLED && !RELEASE_LOG_DISABLED
 static void logGLDebugMessage(GLenum source, GLenum type, GLuint identifier, GLenum severity, GLsizei, const GLchar* message, const void*)
 {
     static constexpr auto sourceName = [](GLenum source) -> const char* {
@@ -411,7 +411,7 @@ static inline bool shouldEnableDebugLogging()
 {
     return LOG_CHANNEL(GLContext).state != WTFLogChannelState::Off;
 }
-#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
+#endif // !LOG_DISABLED && !RELEASE_LOG_DISABLED
 
 GLContext::GLContext(GLDisplay& display, EGLContext context, EGLSurface surface, EGLConfig config)
     : m_display(display)
@@ -421,7 +421,7 @@ GLContext::GLContext(GLDisplay& display, EGLContext context, EGLSurface surface,
 {
     RELEASE_ASSERT(context != EGL_NO_CONTEXT);
 
-#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+#if !LOG_DISABLED && !RELEASE_LOG_DISABLED
     if (shouldEnableDebugLogging()) [[unlikely]] {
         GLContext* previousContext = nullptr;
         if (!isCurrent()) {
@@ -439,7 +439,7 @@ GLContext::GLContext(GLDisplay& display, EGLContext context, EGLSurface surface,
         if (previousContext)
             previousContext->makeContextCurrent();
     }
-#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
+#endif // !LOG_DISABLED && !RELEASE_LOG_DISABLED
 
 #if ENABLE(MEDIA_TELEMETRY)
     if (m_surface != EGL_NO_SURFACE) {
@@ -485,7 +485,7 @@ EGLContext GLContext::createEGLContext(GLDisplay& display, EGLConfig config, EGL
         EGL_CONTEXT_CLIENT_VERSION, 2,
     };
 
-#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+#if !LOG_DISABLED && !RELEASE_LOG_DISABLED
     if (shouldEnableDebugLogging()) {
         if (display.checkVersion(1, 5)) {
             contextAttributes.append(EGL_CONTEXT_OPENGL_DEBUG);

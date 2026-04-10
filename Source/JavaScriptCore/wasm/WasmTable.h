@@ -95,7 +95,13 @@ public:
 protected:
     Table(uint32_t initial, std::optional<uint32_t> maximum, Type, TableElementType = TableElementType::Externref);
 
+#if PLATFORM(WIN)
+    // FIXME: NODELETE removed as workaround for clang 21 MS ABI mangler crash
+    // with [[clang::annotate_type]] on decltype(auto) template functions.
+    template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&);
+#else
     template<typename Visitor> constexpr decltype(auto) NODELETE visitDerived(Visitor&&);
+#endif
     template<typename Visitor> constexpr decltype(auto) visitDerived(Visitor&&) const;
 
     void NODELETE setLength(uint32_t);

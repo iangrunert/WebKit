@@ -465,6 +465,7 @@ endif ()
 # TestWebCore target
 if (ENABLE_WEBCORE)
     WEBKIT_TEST(TestWebCore)
+    target_precompile_headers(TestWebCore PRIVATE ${TESTWEBKITAPI_DIR}/TestWebCorePrefix.h)
 endif ()
 
 # TestWebKitLegacy target
