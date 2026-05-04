@@ -377,23 +377,26 @@ fast/events/wheel/platform-wheelevent-paging-y-in-scrolling-page.html [ Skip ]
 # platformLayerTreeAsText is only implemented for Cocoa ports.
 fast/harness/platform-layer-tree-as-text.html [ Skip ]
 
-# OffscreenCanvas isn't supported yet
-fast/canvas/offscreen-backing-store-attached.html [ Skip ]
-fast/canvas/offscreen-border.html [ Skip ]
-fast/canvas/offscreen-clipped.html [ Skip ]
-fast/canvas/offscreen-enabled.html [ Skip ]
-fast/canvas/offscreen-giant-transfer-to-imagebitmap.html [ Skip ]
-fast/canvas/offscreen-giant.html [ Skip ]
-fast/canvas/offscreen-nested-worker-serialization.html [ Skip ]
-fast/canvas/offscreen-no-script-context-crash.html [ Skip ]
-fast/canvas/offscreen-scaling.html [ Skip ]
-fast/canvas/offscreen-toggle-display.html [ Skip ]
-fast/canvas/offscreen-visibility-change.html [ Skip ]
-fast/images/protected-image-queue.html [ Skip ]
-webgl/2.0.y/conformance/offscreencanvas/context-lost-restored.html [ Skip ]
-webgl/2.0.y/conformance/offscreencanvas/context-lost.html [ Skip ]
-webgl/offscreen-webgl-errors-to-console.html [ Skip ]
-webgl/webgl-worker.html [ Skip ]
+# OffscreenCanvas via canvas.transferControlToOffscreen() does not propagate
+# rendered frames back to the visible placeholder canvas on the Win port: the
+# OffscreenCanvas backing buffer is painted, but
+# PlaceholderRenderingContextSource::setContentsToLayer relies on
+# GraphicsLayer::createAsyncContentsDisplayDelegate(), which is overridden only
+# by GraphicsLayerCA (Cocoa) and GraphicsLayerCoordinated (GTK/WPE). Win uses
+# GraphicsLayerTextureMapper which falls through to the base implementation
+# returning nullptr, so the async display delegate is never set up and frames
+# are silently dropped. All 8 tests below render blank canvases as a result.
+# Fix is to implement createAsyncContentsDisplayDelegate for the Win
+# GraphicsLayer path (mirror GraphicsLayerCoordinated.cpp:420 and
+# GraphicsLayerAsyncContentsDisplayDelegateCoordinated).
+fast/canvas/offscreen-backing-store-attached.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-border.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-clipped.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-giant.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-nested-worker-serialization.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-scaling.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-toggle-display.html [ ImageOnlyFailure ]
+fast/canvas/offscreen-visibility-change.html [ ImageOnlyFailure ]
 
 # Accelerated canvas isn't supported yet
 fast/canvas/canvas-will-read-frequently.html [ Skip ]
