@@ -43,6 +43,11 @@
 #include "DrawingAreaProxyWC.h"
 #endif
 
+#if USE(COORDINATED_GRAPHICS)
+#include "AcceleratedBackingStore.h"
+#include "LayerTreeContext.h"
+#endif
+
 namespace WebKit {
 using namespace WebCore;
 
@@ -203,17 +208,39 @@ Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& pa
 
 void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& layerTreeContext)
 {
+#if USE(COORDINATED_GRAPHICS)
+    if (!m_acceleratedBackingStore)
+        m_acceleratedBackingStore = AcceleratedBackingStore::create(*m_view.page());
+    m_acceleratedBackingStore->update(layerTreeContext);
+    m_view.setViewNeedsDisplay(WebCore::Region(WebCore::IntRect({ }, m_view.viewSize())));
+#else
+    UNUSED_PARAM(layerTreeContext);
     notImplemented();
+#endif
 }
 
 void PageClientImpl::exitAcceleratedCompositingMode()
 {
+#if USE(COORDINATED_GRAPHICS)
+    if (m_acceleratedBackingStore) {
+        m_acceleratedBackingStore->update({ });
+        m_acceleratedBackingStore = nullptr;
+    }
+    m_view.setViewNeedsDisplay(WebCore::Region(WebCore::IntRect({ }, m_view.viewSize())));
+#else
     notImplemented();
+#endif
 }
 
 void PageClientImpl::updateAcceleratedCompositingMode(const LayerTreeContext& layerTreeContext)
 {
+#if USE(COORDINATED_GRAPHICS)
+    if (m_acceleratedBackingStore)
+        m_acceleratedBackingStore->update(layerTreeContext);
+#else
+    UNUSED_PARAM(layerTreeContext);
     notImplemented();
+#endif
 }
 
 void PageClientImpl::pageClosed()

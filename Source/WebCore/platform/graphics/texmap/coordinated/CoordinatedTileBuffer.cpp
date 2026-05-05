@@ -157,7 +157,7 @@ bool CoordinatedUnacceleratedTileBuffer::tryEnsureSurface()
 #if USE(SKIA)
 Ref<CoordinatedTileBuffer> CoordinatedAcceleratedTileBuffer::create(Ref<BitmapTexture>&& texture)
 {
-    auto flags = CoordinatedTileBuffer::Flags { texture->isOpaque() ? CoordinatedTileBuffer::NoFlags : CoordinatedTileBuffer::SupportsAlpha };
+    auto flags = static_cast<CoordinatedTileBuffer::Flags>(texture->isOpaque() ? CoordinatedTileBuffer::NoFlags : CoordinatedTileBuffer::SupportsAlpha);
     return adoptRef(*new CoordinatedAcceleratedTileBuffer(WTF::move(texture), flags));
 }
 

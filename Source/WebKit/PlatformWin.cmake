@@ -86,6 +86,14 @@ list(APPEND WebKit_SERIALIZATION_IN_FILES
     Shared/win/WTFArgumentCodersWin.serialization.in
 )
 
+if (USE_COORDINATED_GRAPHICS)
+    list(APPEND WebKit_MESSAGES_IN_FILES
+        UIProcess/win/AcceleratedBackingStore
+
+        WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface
+    )
+endif ()
+
 list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/Platform/IPC/win"
     "${WEBKIT_DIR}/Platform/classifier"
@@ -154,4 +162,20 @@ if (USE_CAIRO)
     include(Platform/Cairo.cmake)
 elseif (USE_SKIA)
     include(Platform/Skia.cmake)
+endif ()
+
+if (USE_COORDINATED_GRAPHICS)
+    list(APPEND WebKit_SOURCES
+        UIProcess/win/AcceleratedBackingStore.cpp
+
+        WebProcess/GPU/graphics/win/RemoteGraphicsContextGLProxyCoordinatedWin.cpp
+
+        WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurfaceWin.cpp
+        WebProcess/WebPage/CoordinatedGraphics/CompositingRunLoop.cpp
+        WebProcess/WebPage/CoordinatedGraphics/CoordinatedSceneState.cpp
+        WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostWin.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ScrollbarsControllerCoordinated.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositorWin.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ThreadedDisplayRefreshMonitorWin.cpp
+    )
 endif ()

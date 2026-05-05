@@ -27,6 +27,13 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
+// On Windows the AcceleratedSurface class lives in AcceleratedSurfaceWin.h.
+// The generated <AcceleratedSurface>MessageReceiver.cpp includes this header
+// to find the class declaration, so forward to the Win sibling here.
+#if PLATFORM(WIN)
+#include "AcceleratedSurfaceWin.h"
+#else
+
 #include "MessageReceiver.h"
 #include <WebCore/Color.h>
 #include <WebCore/CoordinatedCompositionReason.h>
@@ -421,5 +428,7 @@ private:
 };
 
 } // namespace WebKit
+
+#endif // !PLATFORM(WIN)
 
 #endif // USE(COORDINATED_GRAPHICS)

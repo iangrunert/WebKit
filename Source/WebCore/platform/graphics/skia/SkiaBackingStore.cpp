@@ -31,6 +31,11 @@
 #include "CoordinatedTileBuffer.h"
 #include "PlatformDisplay.h"
 #include "SkiaPaintingEngine.h"
+#if USE(LIBEPOXY)
+#include <epoxy/gl.h>
+#else
+#include <GLES3/gl3.h>
+#endif
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkColorSpace.h>
 #include <skia/gpu/ganesh/GrBackendSurface.h>

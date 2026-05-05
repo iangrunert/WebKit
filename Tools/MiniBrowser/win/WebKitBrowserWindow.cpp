@@ -225,12 +225,13 @@ void WebKitBrowserWindow::updateProxySettings()
     WKWebsiteDataStoreEnableCustomNetworkProxySettings(websiteDataStore, url.get(), excludeHosts.get());
 }
 
-// FIXME: The current design of WebKit produces too many noises on fractional device scale factor.
-// This rounds device scale factor for tantative workarond.
+// Originally rounded the DPR to an integer as a workaround for the WC path's
+// fractional-DPR rendering noise. The coordinated-graphics path renders
+// correctly at fractional DPR via Skia, so pass the actual value through.
 void WebKitBrowserWindow::adjustScaleFactors()
 {
     WKPageRef page = WKViewGetPage(m_view.get());
-    WKPageSetCustomBackingScaleFactor(page, std::round(WebCore::deviceScaleFactorForWindow(hwnd())));
+    WKPageSetCustomBackingScaleFactor(page, WebCore::deviceScaleFactorForWindow(hwnd()));
 }
 
 HRESULT WebKitBrowserWindow::init()

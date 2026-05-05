@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Igalia S.L.
+# Copyright (c) 2026 Ian Grunert <ian.grunert@gmail.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -25,12 +25,8 @@
     ExceptionForDispatchedTo,
     ExceptionForEnabledBy
 ]
-messages -> AcceleratedSurface {
-#if OS(WINDOWS)
-    ReleaseBuffer(uint64_t id)
-#endif
-#if !OS(WINDOWS)
-    ReleaseBuffer(uint64_t id, UnixFileDescriptor releaseFence)
-#endif
-    FrameDone()
+messages -> AcceleratedBackingStore {
+    DidCreateSHMBuffer(uint64_t id, WebCore::ShareableBitmapHandle handle)
+    DidDestroyBuffer(uint64_t id)
+    Frame(uint64_t id, Vector<WebCore::IntRect, 1> damage)
 }

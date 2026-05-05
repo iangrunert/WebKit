@@ -156,6 +156,15 @@ if (USE_GRAPHICS_LAYER_WC)
 
         platform/graphics/wc/WCPlatformLayer.h
     )
+
+    # TextureMapperSparseBackingStore depends on TextureMapperTile. When
+    # USE_COORDINATED_GRAPHICS is also enabled, the legacy TextureMapper else-branch
+    # above doesn't include it, so add it explicitly here when WC is on.
+    if (USE_COORDINATED_GRAPHICS)
+        list(APPEND WebCore_SOURCES
+            platform/graphics/texmap/TextureMapperTile.cpp
+        )
+    endif ()
 endif ()
 
 if (USE_GBM)

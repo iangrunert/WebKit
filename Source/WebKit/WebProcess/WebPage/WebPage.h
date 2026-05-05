@@ -1507,7 +1507,7 @@ public:
     void setDeviceScaleFactor(float);
     float NODELETE deviceScaleFactor() const;
 
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     void setIntrinsicDeviceScaleFactor(float f) { m_intrinsicDeviceScaleFactor = f; }
     float intrinsicDeviceScaleFactor() const { return m_intrinsicDeviceScaleFactor; }
 #endif
@@ -1953,7 +1953,7 @@ public:
     void showMediaControlsContextMenu(WebCore::FloatRect&&, Vector<WebCore::MediaControlsContextMenuItem>&&, WebCore::HTMLMediaElementIdentifier, CompletionHandler<void(WebCore::MediaControlsContextMenuItem::ID)>&&);
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS) && USE(UICONTEXTMENU)
 
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     uint64_t nativeWindowHandle() { return m_nativeWindowHandle; }
 #endif
 
@@ -2888,7 +2888,7 @@ private:
     RefPtr<WebCore::AccessibilityRootAtspi> m_accessibilityRootObject;
 #endif
 
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     float m_intrinsicDeviceScaleFactor { 1 };
     uint64_t m_nativeWindowHandle { 0 };
 #endif

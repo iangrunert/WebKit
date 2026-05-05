@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR) && ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingStateScrollingNode.h"
 #include <wtf/Forward.h>

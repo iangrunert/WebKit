@@ -32,6 +32,12 @@
 #include "TextureMapper.h"
 #include <wtf/MathExtras.h>
 
+#if USE(LIBEPOXY)
+#include <epoxy/gl.h>
+#else
+#include <GLES3/gl3.h>
+#endif
+
 #if USE(GSTREAMER) && USE(GBM)
 #include <drm_fourcc.h>
 #include <epoxy/egl.h>

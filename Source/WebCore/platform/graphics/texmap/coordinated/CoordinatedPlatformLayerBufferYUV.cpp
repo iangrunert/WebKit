@@ -31,6 +31,21 @@
 #include "PlatformDisplay.h"
 #include "TextureMapper.h"
 
+#if USE(LIBEPOXY)
+#include <epoxy/gl.h>
+#else
+#include <GLES3/gl3.h>
+#endif
+
+// EXT_texture_norm16 became core in GLES 3.2. ANGLE only ships up to GLES 3.1
+// headers, so the unprefixed names need a fallback when building against ANGLE.
+#ifndef GL_R16
+#define GL_R16 0x822A
+#endif
+#ifndef GL_RG16
+#define GL_RG16 0x822C
+#endif
+
 #if USE(SKIA)
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkImage.h>

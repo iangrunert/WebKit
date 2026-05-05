@@ -28,7 +28,7 @@
 #include "config.h"
 #include "ScrollerCoordinated.h"
 
-#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR) && ENABLE(ASYNC_SCROLLING)
 #include "BitmapTexturePool.h"
 #include "CoordinatedPlatformLayer.h"
 #include "CoordinatedPlatformLayerBufferRGB.h"

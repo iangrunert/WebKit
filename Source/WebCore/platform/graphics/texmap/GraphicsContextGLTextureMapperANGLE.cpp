@@ -428,7 +428,12 @@ void GraphicsContextGLTextureMapperANGLE::prepareForDisplay()
         flags.add(TextureMapperFlags::ShouldBlend);
     auto fboSize = getInternalFramebufferSize();
     auto fence = GLFence::create(PlatformDisplay::sharedDisplay().glDisplay());
-    m_layerContentsDisplayDelegate->setDisplayBuffer(CoordinatedPlatformLayerBufferRGB::create(m_compositorTextureID, fboSize, flags, WTF::move(fence)));
+#if USE(LIBEPOXY)
+    auto textureForDisplay = m_compositorTextureID;
+#else
+    auto textureForDisplay = m_compositorTexture;
+#endif
+    m_layerContentsDisplayDelegate->setDisplayBuffer(CoordinatedPlatformLayerBufferRGB::create(textureForDisplay, fboSize, flags, WTF::move(fence)));
 #endif
 }
 

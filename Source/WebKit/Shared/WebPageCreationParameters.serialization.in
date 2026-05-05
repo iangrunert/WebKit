@@ -70,7 +70,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
     bool canRunModal;
 
     float deviceScaleFactor;
-#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || PLATFORM(WIN)
     float intrinsicDeviceScaleFactor;
 #endif
     float viewScaleFactor;
@@ -161,7 +161,7 @@ enum class WebCore::UserInterfaceLayoutDirection : bool;
 #if USE(WPE_RENDERER)
     UnixFileDescriptor hostFileDescriptor;
 #endif
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     uint64_t nativeWindowHandle;
 #endif
 #if USE(GRAPHICS_LAYER_WC)

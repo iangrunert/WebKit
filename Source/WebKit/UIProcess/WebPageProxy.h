@@ -1413,7 +1413,7 @@ public:
     const std::optional<WebCore::Color>& NODELETE backgroundColor() const LIFETIME_BOUND;
     void setBackgroundColor(const std::optional<WebCore::Color>&);
 
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     uint64_t viewWidget();
 #endif
 
@@ -1536,7 +1536,7 @@ public:
     void setShouldScaleViewToFitDocument(bool);
     
     float NODELETE deviceScaleFactor() const;
-#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || PLATFORM(WIN)
     float intrinsicDeviceScaleFactor() const { return m_intrinsicDeviceScaleFactor; }
 #endif
     void setIntrinsicDeviceScaleFactor(float);

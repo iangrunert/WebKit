@@ -26,6 +26,12 @@
 #include "config.h"
 #include "WebKitDLL.h"
 
+namespace WebCore {
+// Forward-declare from <WebCore/WebCoreInstanceHandle.h>; that header is not
+// published as a framework header so we can't include it directly here.
+void setInstanceHandle(HINSTANCE);
+}
+
 namespace WebKit {
 
 HINSTANCE s_instanceHandle;
@@ -43,6 +49,9 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD reason, LPVOID)
     switch (reason) {
     case DLL_PROCESS_ATTACH:
         WebKit::s_instanceHandle = hInstance;
+        // When WebCore is linked into this DLL as an OBJECT library, WebCore's
+        // own DllMain is suppressed, so set WebCore::s_instanceHandle here.
+        WebCore::setInstanceHandle(hInstance);
         break;
     }
     return true;

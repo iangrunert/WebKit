@@ -36,8 +36,18 @@ HINSTANCE instanceHandle()
     return s_instanceHandle;
 }
 
+void setInstanceHandle(HINSTANCE handle)
+{
+    s_instanceHandle = handle;
+}
+
 } // namespace WebCore
 
+// Only define DllMain when WebCore is its own DLL. When WebCore is built as
+// an OBJECT library and linked into another DLL (e.g. WebKit2 with the
+// coordinated-graphics opt-in), the host DLL's DllMain forwards the instance
+// handle to WebCore::s_instanceHandle.
+#ifdef WebCore_EXPORTS
 BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD reason, LPVOID)
 {
     switch (reason) {
@@ -47,3 +57,4 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD reason, LPVOID)
     }
     return true;
 }
+#endif

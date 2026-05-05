@@ -32,7 +32,10 @@
 
 namespace WebCore {
 
-#if !PLATFORM(MAC) && !PLATFORM(WPE) && !PLATFORM(GTK)
+// The platforms below provide their own ScrollbarsController::create:
+//   * Mac: ScrollbarsControllerMac.mm
+//   * GTK / WPE / coordinated-graphics-async-scrollbar (Windows): ScrollbarsControllerGeneric.cpp
+#if !PLATFORM(MAC) && !PLATFORM(WPE) && !PLATFORM(GTK) && !USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollbarsController);
 

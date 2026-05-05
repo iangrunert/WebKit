@@ -33,6 +33,11 @@
 #include "WebFullScreenManagerProxy.h"
 #include "WebPageProxy.h"
 #include <WebCore/IntSize.h>
+#include <wtf/RefPtr.h>
+
+#if USE(COORDINATED_GRAPHICS)
+#include "AcceleratedBackingStore.h"
+#endif
 
 namespace WebCore {
 enum class DOMPasteAccessCategory : uint8_t;
@@ -61,6 +66,10 @@ public:
     PageClientImpl(WebView&);
 
     HWND viewWidget();
+
+#if USE(COORDINATED_GRAPHICS)
+    AcceleratedBackingStore* acceleratedBackingStore() const { return m_acceleratedBackingStore.get(); }
+#endif
 private:
     // PageClient
     Ref<DrawingAreaProxy> createDrawingAreaProxy(WebProcessProxy&) override;
@@ -166,6 +175,10 @@ private:
     DefaultUndoController m_undoController;
 
     WebView& m_view;
+
+#if USE(COORDINATED_GRAPHICS)
+    RefPtr<AcceleratedBackingStore> m_acceleratedBackingStore;
+#endif
 };
 
 } // namespace WebKit

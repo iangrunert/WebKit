@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ScrollingStateScrollingNode.h"
 
-#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR) && ENABLE(ASYNC_SCROLLING)
 #include "ScrollbarThemeAdwaita.h"
 #include "ScrollerImpAdwaita.h"
 

@@ -28,7 +28,7 @@
 #include "config.h"
 #include "ScrollerPairCoordinated.h"
 
-#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR) && ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollTypes.h"
 #include "ScrollerCoordinated.h"

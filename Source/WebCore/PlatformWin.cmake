@@ -148,6 +148,7 @@ list(APPEND WebCore_LIBRARIES
     crypt32
     iphlpapi
     usp10
+    ws2_32
 )
 
 list(APPEND WebCoreTestSupport_LIBRARIES
@@ -237,4 +238,10 @@ endif ()
 
 if (USE_SKIA)
     list(APPEND WebCore_PRIVATE_LIBRARIES ${SHARPYUV_LIBS})
+endif ()
+
+if (USE_COORDINATED_GRAPHICS)
+    list(APPEND WebCore_SOURCES
+        platform/generic/ScrollbarsControllerGeneric.cpp
+    )
 endif ()

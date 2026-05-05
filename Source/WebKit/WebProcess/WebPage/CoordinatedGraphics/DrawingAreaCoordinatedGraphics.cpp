@@ -49,6 +49,8 @@
 
 #if PLATFORM(PLAYSTATION)
 #include "LayerTreeHostPlayStation.h"
+#elif PLATFORM(WIN) && USE(COORDINATED_GRAPHICS)
+#include "LayerTreeHostWin.h"
 #endif
 
 #if USE(GLIB_EVENT_LOOP)

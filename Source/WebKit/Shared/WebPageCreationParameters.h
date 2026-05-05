@@ -155,7 +155,7 @@ struct WebPageCreationParameters {
     bool canRunModal { false };
 
     float deviceScaleFactor { 0 };
-#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || PLATFORM(WIN)
     float intrinsicDeviceScaleFactor { 0 };
 #endif
     float viewScaleFactor { 0 };
@@ -245,7 +245,7 @@ struct WebPageCreationParameters {
 #if USE(WPE_RENDERER)
     UnixFileDescriptor hostFileDescriptor { };
 #endif
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     uint64_t nativeWindowHandle { 0 };
 #endif
 #if USE(GRAPHICS_LAYER_WC)

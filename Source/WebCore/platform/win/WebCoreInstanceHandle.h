@@ -30,5 +30,6 @@
 namespace WebCore {
 
 HINSTANCE instanceHandle();
-    
+void setInstanceHandle(HINSTANCE);
+
 }

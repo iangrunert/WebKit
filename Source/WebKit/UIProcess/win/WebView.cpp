@@ -41,6 +41,10 @@
 #include "WebPageGroup.h"
 #include "WebPageProxy.h"
 #include "WebProcessPool.h"
+
+#if USE(COORDINATED_GRAPHICS)
+#include "AcceleratedBackingStore.h"
+#endif
 #include <WebCore/Cursor.h>
 #include <WebCore/Document.h>
 #include <WebCore/Editor.h>
@@ -492,6 +496,12 @@ void WebView::paint(HDC hdc, const IntRect& dirtyRect)
     if (dirtyRect.isEmpty())
         return;
     m_page->endPrinting();
+#if USE(COORDINATED_GRAPHICS)
+    if (auto* backingStore = m_pageClient->acceleratedBackingStore()) {
+        backingStore->paint(hdc, dirtyRect);
+        return;
+    }
+#endif
     if (m_page->drawingArea()) {
         auto painter = [&](auto drawingArea) {
             // FIXME: We should port WebKit1's rect coalescing logic here.

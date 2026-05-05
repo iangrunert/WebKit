@@ -653,7 +653,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
 #elif PLATFORM(GTK)
     , m_accessibilityObject(nullptr)
 #endif
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC) || PLATFORM(WIN)
     , m_nativeWindowHandle(parameters.nativeWindowHandle)
 #endif
     , m_setCanStartMediaTimer(RunLoop::mainSingleton(), "WebPage::SetCanStartMediaTimer"_s, this, &WebPage::setCanStartMediaTimerFired)
@@ -982,7 +982,7 @@ WebPage::WebPage(PageIdentifier pageID, WebPageCreationParameters&& parameters)
     // to ensure it's created with the right size.
     page->setDeviceScaleFactor(parameters.deviceScaleFactor);
 
-#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER)
+#if USE(GRAPHICS_LAYER_WC) || USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || PLATFORM(WIN)
     setIntrinsicDeviceScaleFactor(parameters.intrinsicDeviceScaleFactor);
 #endif
 

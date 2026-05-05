@@ -32,6 +32,12 @@
 #include "PlatformDisplay.h"
 #include "TextureMapper.h"
 
+#if USE(LIBEPOXY)
+#include <epoxy/gl.h>
+#else
+#include <GLES3/gl3.h>
+#endif
+
 #if USE(SKIA)
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/core/SkColorFilter.h>

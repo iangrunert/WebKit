@@ -60,7 +60,7 @@ private:
     bool enterAcceleratedCompositingModeIfNeeded() override { return false; }
     void setLayerTreeStateIsFrozen(bool) override;
     bool layerTreeStateIsFrozen() const override { return m_isRenderingSuspended; }
-#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER)    
+#if USE(GRAPHICS_LAYER_TEXTURE_MAPPER) || USE(GRAPHICS_LAYER_WC)
     void updateGeometry(const WebCore::IntSize&, CompletionHandler<void()>&&) override { }
 #endif
     void updateGeometryWC(uint64_t, WebCore::IntSize, float deviceScaleFactor, float intrinsicDeviceScaleFactor) override;

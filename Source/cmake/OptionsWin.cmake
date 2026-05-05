@@ -117,10 +117,26 @@ WEBKIT_OPTION_END()
 
 set(USE_ANGLE_EGL ON)
 
+# Opt-in: build the threaded coordinated-graphics compositor as a replacement
+# for the default USE_GRAPHICS_LAYER_WC path. The two are mutually exclusive
+# (WC and CG both define a 'PlatformLayer' typedef with incompatible base
+# classes). See Source/WebKit/UIProcess/win/PageClientImpl.cpp.
+# USE_GRAPHICS_LAYER_TEXTURE_MAPPER is also mutually exclusive with
+# USE_COORDINATED_GRAPHICS: DrawingAreaCoordinatedGraphics.cpp picks the
+# LayerTreeHost ctor at compile time based on which is set.
+option(USE_COORDINATED_GRAPHICS_WIN "Build the coordinated-graphics threaded compositor for the Windows port (replaces USE_GRAPHICS_LAYER_WC)" OFF)
+
 SET_AND_EXPOSE_TO_BUILD(USE_ANGLE ON)
 SET_AND_EXPOSE_TO_BUILD(USE_CURL ON)
-SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_TEXTURE_MAPPER ON)
-SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_WC ON)
+if (USE_COORDINATED_GRAPHICS_WIN)
+    SET_AND_EXPOSE_TO_BUILD(USE_COORDINATED_GRAPHICS ON)
+    SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_TEXTURE_MAPPER OFF)
+    SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_WC OFF)
+else ()
+    SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_TEXTURE_MAPPER ON)
+    SET_AND_EXPOSE_TO_BUILD(USE_GRAPHICS_LAYER_WC ON)
+endif ()
+
 SET_AND_EXPOSE_TO_BUILD(USE_HARFBUZZ ON)
 SET_AND_EXPOSE_TO_BUILD(USE_OPENSSL ON)
 SET_AND_EXPOSE_TO_BUILD(USE_TEXTURE_MAPPER ON)
@@ -184,5 +200,13 @@ set(bmalloc_LIBRARY_TYPE OBJECT)
 set(WTF_LIBRARY_TYPE OBJECT)
 set(JavaScriptCore_LIBRARY_TYPE SHARED)
 set(PAL_LIBRARY_TYPE OBJECT)
-set(WebCore_LIBRARY_TYPE SHARED)
+# When the coordinated-graphics threaded compositor is enabled on Windows,
+# build WebCore as an OBJECT library (matching GTK/PlayStation). The CG code
+# in WebCore does not have WEBCORE_EXPORT annotations on the symbols WebKit
+# consumes, and adding them across ~20 sites is out of scope for the opt-in.
+if (USE_COORDINATED_GRAPHICS_WIN)
+    set(WebCore_LIBRARY_TYPE OBJECT)
+else ()
+    set(WebCore_LIBRARY_TYPE SHARED)
+endif ()
 set(WebCoreTestSupport_LIBRARY_TYPE OBJECT)
