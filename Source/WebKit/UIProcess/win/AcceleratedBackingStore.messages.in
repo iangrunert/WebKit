@@ -26,7 +26,12 @@
     ExceptionForEnabledBy
 ]
 messages -> AcceleratedBackingStore {
+    # WebProcess advertises a new shared-memory bitmap. Phase 3's D3D11
+    # path will add a sibling DidCreateD3DBuffer(uint64_t, Win32Handle) for
+    # NT-shared D3D textures.
     DidCreateSHMBuffer(uint64_t id, WebCore::ShareableBitmapHandle handle)
     DidDestroyBuffer(uint64_t id)
+    # damage is decoded but not yet consumed; Phase 3 will use it to pick a
+    # source rect for IDCompositionVisual::SetContent.
     Frame(uint64_t id, Vector<WebCore::IntRect, 1> damage)
 }

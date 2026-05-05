@@ -52,12 +52,13 @@ class ShareableBitmap;
 namespace WebKit {
 class WebPage;
 
-// Phase 2: SHM render path. The threaded compositor renders into an offscreen
-// FBO (RGBA8 renderbuffer); on didRenderFrame we glReadPixels into a
-// ShareableBitmap and send a Frame IPC to AcceleratedBackingStoreWin in the UI
+// SHM render path. The threaded compositor renders into an offscreen FBO
+// (RGBA8 renderbuffer); on didRenderFrame we glReadPixels into a
+// ShareableBitmap and send a Frame IPC to AcceleratedBackingStore in the UI
 // process, which BitBlts the bitmap into the HWND DC.
-// Phase 3 will replace the SHM render target with ANGLE D3D11 shared NT
-// handles + DirectComposition (see silly-snuggling-scone-d3d-present.md).
+// The eventual D3D11 shared-handle + DirectComposition path replaces the SHM
+// render target while keeping the same IPC shape — see
+// silly-snuggling-scone-d3d-present.md for the design.
 class AcceleratedSurface final
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AcceleratedSurface, WTF::DestructionThread::MainRunLoop>
     , public IPC::MessageReceiver {
@@ -73,9 +74,13 @@ public:
 
     uint64_t window() const { return 0; }
     uint64_t surfaceID() const { return m_id; }
-    // No FlipY: glReadPixels reads bottom-up, and we render into a
-    // BottomUp DIB (BitmapInfo::createBottomUp), so the two orientations
-    // already match without flipping.
+    // Returning false here cascades through ThreadedCompositor's
+    // `if (!nativeSurfaceHandle) m_flipY = !m_flipY` toggle to FlipY=Yes, so
+    // TextureMapper renders the page upside-down in the FBO. glReadPixels
+    // reads bottom-up, putting the top of the page at row 0 of the bitmap;
+    // BitmapInfo::createBottomUp produces a top-down DIB (negative biHeight,
+    // despite the function name), so SetDIBitsToDevice draws row 0 at the
+    // top of the window — net: page right-side-up.
     bool shouldPaintMirrored() const { return false; }
 
     void willDestroyGLContext();
@@ -109,15 +114,20 @@ private:
     Function<void()> m_frameCompleteHandler;
     uint64_t m_id { 0 };
     WebCore::IntSize m_size;
-    bool m_isVisible { false };
     std::atomic<ColorComponents> m_backgroundColor { white };
 
-    // Phase 2 SHM render target. Created lazily once we know the viewport size.
+    // SHM render target. Today there is exactly one bitmap, recreated on
+    // resize; the D3D11 shared-handle path will introduce a SwapChain with
+    // 2-3 in-flight buffers tracked by m_currentBufferID — see
+    // silly-snuggling-scone-d3d-present.md.
     uint64_t m_currentBufferID { 0 };
     unsigned m_fbo { 0 };
     unsigned m_colorRenderbuffer { 0 };
     RefPtr<WebCore::ShareableBitmap> m_bitmap;
-    bool m_bitmapHandleSent { false };
+    // m_isWaitingForFrameDone is currently set/cleared but not consulted —
+    // single-buffering means the WebProcess can clobber the bitmap immediately
+    // after sending Frame. Once a SwapChain lands, this gates the next render
+    // until the UI process Releases the buffer (see ReleaseBuffer message).
     bool m_isWaitingForFrameDone { false };
 };
 

@@ -47,10 +47,10 @@
 #include <WebCore/ShareableBitmap.h>
 #include <wtf/SetForScope.h>
 
-#if PLATFORM(PLAYSTATION)
-#include "LayerTreeHostPlayStation.h"
-#elif PLATFORM(WIN) && USE(COORDINATED_GRAPHICS)
-#include "LayerTreeHostWin.h"
+// LayerTreeHostPSW.{h,cpp} is the shared compositor LayerTreeHost
+// implementation used by both the PlayStation and Windows ports.
+#if PLATFORM(PLAYSTATION) || (PLATFORM(WIN) && USE(COORDINATED_GRAPHICS))
+#include "LayerTreeHostPSW.h"
 #endif
 
 #if USE(GLIB_EVENT_LOOP)

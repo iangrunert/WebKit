@@ -26,10 +26,10 @@
 #include "config.h"
 #include "RemoteGraphicsContextGLProxy.h"
 
-// Phase 1 stub: WebGL in the GPU process under coordinated graphics on Windows
-// is not yet wired through D3D shared textures. This class lets WebKit2 link;
-// the layer contents display delegate is a no-op until the D3D shared-handle
-// present path lands (see silly-snuggling-scone-d3d-present.md).
+// WebGL-in-GPU-process under coordinated-graphics on Windows is not yet
+// wired through D3D shared textures. This class lets WebKit2 link; the
+// layer contents display delegate is a no-op delegate until the D3D11
+// shared-handle present path lands — see silly-snuggling-scone-d3d-present.md.
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL) && USE(COORDINATED_GRAPHICS) && PLATFORM(WIN)
 #include <WebCore/GraphicsLayerContentsDisplayDelegateCoordinated.h>
 

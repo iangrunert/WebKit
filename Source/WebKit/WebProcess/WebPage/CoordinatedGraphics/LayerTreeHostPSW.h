@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2026 Ian Grunert <ian.grunert@gmail.com>
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +29,7 @@
 #if USE(COORDINATED_GRAPHICS)
 #include "CallbackID.h"
 #include "LayerTreeContext.h"
-#include "ThreadedCompositorWin.h"
-#include "ThreadedDisplayRefreshMonitorWin.h"
+#include "ThreadedCompositorPSW.h"
 #include <WebCore/CoordinatedImageBackingStore.h>
 #include <WebCore/CoordinatedPlatformLayer.h>
 #include <WebCore/FloatPoint.h>
@@ -44,13 +44,31 @@
 #include <wtf/RunLoop.h>
 #include <wtf/TZoneMalloc.h>
 
+#if !HAVE(DISPLAY_LINK)
+#include "ThreadedDisplayRefreshMonitorPSW.h"
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+#include <WebCore/Region.h>
+#endif
+
 namespace WebCore {
+class Damage;
 class IntRect;
 class IntSize;
 class GraphicsLayer;
 class GraphicsLayerFactory;
 class NativeImage;
 class SkiaPaintingEngine;
+#if USE(CAIRO)
+namespace Cairo {
+class PaintingEngine;
+}
+#endif
+}
+
+namespace WebKit {
+class LayerTreeHost;
 }
 
 namespace WebKit {
@@ -58,12 +76,18 @@ class CoordinatedSceneState;
 class WebPage;
 
 class LayerTreeHost final : public CanMakeCheckedPtr<LayerTreeHost>, public WebCore::GraphicsLayerFactory, public WebCore::CoordinatedPlatformLayer::Client
+#if !HAVE(DISPLAY_LINK)
     , public ThreadedDisplayRefreshMonitor::Client
+#endif
 {
     WTF_MAKE_TZONE_ALLOCATED(LayerTreeHost);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LayerTreeHost);
 public:
+#if HAVE(DISPLAY_LINK)
+    explicit LayerTreeHost(WebPage&);
+#else
     LayerTreeHost(WebPage&, WebCore::PlatformDisplayID);
+#endif
     ~LayerTreeHost();
 
     WebPage& webPage() const { return m_webPage; }
@@ -90,9 +114,20 @@ public:
 
     void willRenderFrame();
     void didRenderFrame();
+#if HAVE(DISPLAY_LINK)
+    void didComposite(uint32_t);
+#endif
 
+#if !HAVE(DISPLAY_LINK)
     RefPtr<WebCore::DisplayRefreshMonitor> createDisplayRefreshMonitor(WebCore::PlatformDisplayID);
     WebCore::PlatformDisplayID displayID() const { return m_displayID; }
+#endif
+
+#if ENABLE(DAMAGE_TRACKING)
+    void notifyFrameDamageForTesting(WebCore::Region&&);
+    void resetDamageHistoryForTesting();
+    void foreachRegionInDamageHistoryForTesting(Function<void(const WebCore::Region&)>&&);
+#endif
 
 private:
     void updateRootLayer();
@@ -100,10 +135,16 @@ private:
     void layerFlushTimerFired();
     void flushLayers();
     void commitSceneState();
+#if !HAVE(DISPLAY_LINK)
     void renderNextFrame(bool);
+#endif
 
     // CoordinatedPlatformLayer::Client
+#if USE(CAIRO)
+    WebCore::Cairo::PaintingEngine& NODELETE paintingEngine() override;
+#elif USE(SKIA)
     WebCore::SkiaPaintingEngine& paintingEngine() const LIFETIME_BOUND override { return *m_skiaPaintingEngine.get(); }
+#endif
     Ref<WebCore::CoordinatedImageBackingStore> imageBackingStore(Ref<WebCore::NativeImage>&&) override;
 
     void attachLayer(WebCore::CoordinatedPlatformLayer&) override;
@@ -119,9 +160,11 @@ private:
     // GraphicsLayerFactory
     Ref<WebCore::GraphicsLayer> createGraphicsLayer(WebCore::GraphicsLayer::Type, WebCore::GraphicsLayerClient&) override;
 
+#if !HAVE(DISPLAY_LINK)
     // ThreadedDisplayRefreshMonitor::Client
     void requestDisplayRefreshMonitorUpdate() override;
     void handleDisplayRefreshMonitorUpdate(bool hasBeenRescheduled) override;
+#endif
 
     WebPage& m_webPage;
     LayerTreeContext m_layerTreeContext;
@@ -131,6 +174,9 @@ private:
     HashSet<Ref<WebCore::CoordinatedPlatformLayer>> m_layers;
     bool m_layerTreeStateIsFrozen { false };
     bool m_pendingResize { false };
+#if HAVE(DISPLAY_LINK)
+    bool m_pendingForceRepaint { false };
+#endif
     bool m_isFlushingLayers { false };
     bool m_waitUntilPaintingComplete { false };
     bool m_isSuspended { false };
@@ -144,14 +190,30 @@ private:
     RefPtr<ThreadedCompositor> m_compositor;
     struct {
         CompletionHandler<void()> callback;
+#if HAVE(DISPLAY_LINK)
+        std::optional<uint32_t> compositionRequestID;
+#else
         bool needsFreshFlush { false };
+#endif
     } m_forceRepaintAsync;
     RunLoop::Timer m_layerFlushTimer;
+#if !HAVE(DISPLAY_LINK)
     WebCore::PlatformDisplayID m_displayID;
+#endif
+#if USE(CAIRO)
+    std::unique_ptr<WebCore::Cairo::PaintingEngine> m_paintingEngine;
+#elif USE(SKIA)
     std::unique_ptr<WebCore::SkiaPaintingEngine> m_skiaPaintingEngine;
+#endif
     HashMap<uint64_t, Ref<WebCore::CoordinatedImageBackingStore>> m_imageBackingStores;
 
     uint32_t m_compositionRequestID { 0 };
+
+#if ENABLE(DAMAGE_TRACKING)
+    Lock m_frameDamageHistoryForTestingLock;
+    Vector<WebCore::Region> m_frameDamageHistoryForTesting WTF_GUARDED_BY_LOCK(m_frameDamageHistoryForTestingLock);
+    std::shared_ptr<WebCore::Damage> m_damageInGlobalCoordinateSpace;
+#endif
 };
 
 } // namespace WebKit

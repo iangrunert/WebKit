@@ -27,11 +27,15 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
-// On Windows the AcceleratedSurface class lives in AcceleratedSurfaceWin.h.
-// The generated <AcceleratedSurface>MessageReceiver.cpp includes this header
-// to find the class declaration, so forward to the Win sibling here.
+// Each port that declares a `class AcceleratedSurface` does so in its own
+// platform-specific header. This file is the canonical entry point — both
+// the generated <AcceleratedSurface>MessageReceiver.cpp and any compositor
+// .cpp that needs the class type include `"AcceleratedSurface.h"` and land
+// at the right port-specific declaration via the redirects below.
 #if PLATFORM(WIN)
 #include "AcceleratedSurfaceWin.h"
+#elif PLATFORM(PLAYSTATION)
+#include "AcceleratedSurfacePlayStation.h"
 #else
 
 #include "MessageReceiver.h"
@@ -429,6 +433,6 @@ private:
 
 } // namespace WebKit
 
-#endif // !PLATFORM(WIN)
+#endif // !(PLATFORM(WIN) || PLATFORM(PLAYSTATION))
 
 #endif // USE(COORDINATED_GRAPHICS)

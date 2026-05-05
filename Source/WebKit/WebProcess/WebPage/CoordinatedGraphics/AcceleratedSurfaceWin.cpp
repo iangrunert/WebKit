@@ -65,7 +65,6 @@ AcceleratedSurface::AcceleratedSurface(WebPage& webPage, Function<void()>&& fram
     : m_webPage(webPage)
     , m_frameCompleteHandler(WTF::move(frameCompleteHandler))
     , m_id(generateID())
-    , m_isVisible(webPage.activityState().contains(ActivityState::IsVisible))
 {
     auto color = webPage.backgroundColor();
     m_backgroundColor = color ? color->toResolvedColorComponentsInColorSpace(WebCore::ColorSpace::SRGB) : white;
@@ -73,11 +72,11 @@ AcceleratedSurface::AcceleratedSurface(WebPage& webPage, Function<void()>&& fram
 
 AcceleratedSurface::~AcceleratedSurface() = default;
 
-void AcceleratedSurface::visibilityDidChange(bool isVisible)
+void AcceleratedSurface::visibilityDidChange(bool)
 {
-    if (m_isVisible == isVisible)
-        return;
-    m_isVisible = isVisible;
+    // Single-buffered SHM today: nothing to release on hide. The D3D11
+    // SwapChain path will want to drop free buffers after a delay when
+    // hidden, matching the GTK/PlayStation releaseUnusedBuffersTimer.
 }
 
 void AcceleratedSurface::backgroundColorDidChange()
@@ -113,13 +112,12 @@ void AcceleratedSurface::destroyTarget()
         glDeleteRenderbuffers(1, &m_colorRenderbuffer);
         m_colorRenderbuffer = 0;
     }
-    if (m_bitmap && m_currentBufferID && m_bitmapHandleSent) {
+    if (m_bitmap && m_currentBufferID) {
         // Tell the UI process to drop the bitmap.
         WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStore::DidDestroyBuffer(m_currentBufferID), m_id);
     }
     m_bitmap = nullptr;
     m_currentBufferID = 0;
-    m_bitmapHandleSent = false;
     m_size = IntSize();
 }
 
@@ -164,7 +162,6 @@ bool AcceleratedSurface::ensureTarget(const IntSize& size)
     m_currentBufferID = generateBufferID();
 
     WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStore::DidCreateSHMBuffer(m_currentBufferID, WTF::move(*handle)), m_id);
-    m_bitmapHandleSent = true;
 
     return true;
 }
@@ -214,7 +211,10 @@ void AcceleratedSurface::sendFrameToUIProcess()
 
 void AcceleratedSurface::releaseBuffer(uint64_t)
 {
-    // Phase 2 uses a single shared bitmap; there's nothing to release.
+    // Single-buffered SHM: the WebProcess clobbers the same bitmap each
+    // frame and the UI side never holds a long-lived reference. Once the
+    // D3D11 SwapChain path lands this releases the buffer back to the free
+    // list so it can be re-rendered into.
 }
 
 void AcceleratedSurface::frameDone()

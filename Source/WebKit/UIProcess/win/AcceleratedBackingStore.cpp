@@ -82,6 +82,15 @@ void AcceleratedBackingStore::update(const LayerTreeContext& context)
 
 void AcceleratedBackingStore::didCreateSHMBuffer(uint64_t id, ShareableBitmap::Handle&& handle)
 {
+    // Single-buffer today; Phase 3's D3D11 swap chain peaks at 4 buffers.
+    // Anything beyond that signals a misbehaving WebProcess — drop the message
+    // rather than let it grow the map without bound.
+    static constexpr unsigned maxRegisteredBuffers = 8;
+    if (m_bitmaps.size() >= maxRegisteredBuffers) {
+        WTFLogAlways("AcceleratedBackingStoreWin: WebProcess registered too many buffers (%u), dropping id=%llu", static_cast<unsigned>(m_bitmaps.size()), id);
+        return;
+    }
+
     auto bitmap = ShareableBitmap::create(WTF::move(handle), SharedMemory::Protection::ReadOnly);
     if (!bitmap)
         return;
@@ -114,9 +123,10 @@ void AcceleratedBackingStore::frame(uint64_t id, Vector<IntRect, 1>&&)
     if (RefPtr webPage = m_webPage.get())
         webPage->setViewNeedsDisplay(IntRect({ }, webPage->viewSize()));
 
-    // Phase 2: ack synchronously. The bitmap is shared memory and stays valid
-    // until the next didCreateSHMBuffer replaces it, so we don't need to wait
-    // for paint to complete before letting the WebProcess render the next frame.
+    // Single-buffered SHM render path: ack immediately so the WebProcess can
+    // start the next frame. Once the D3D11 shared-handle path lands the ack
+    // should move past the actual present (DComp Commit) and ReleaseBuffer
+    // becomes load-bearing — see silly-snuggling-scone-d3d-present.md.
     sendFrameDoneIfNeeded();
 }
 

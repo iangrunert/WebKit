@@ -173,9 +173,14 @@ if (USE_COORDINATED_GRAPHICS)
         WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurfaceWin.cpp
         WebProcess/WebPage/CoordinatedGraphics/CompositingRunLoop.cpp
         WebProcess/WebPage/CoordinatedGraphics/CoordinatedSceneState.cpp
-        WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostWin.cpp
         WebProcess/WebPage/CoordinatedGraphics/ScrollbarsControllerCoordinated.cpp
-        WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositorWin.cpp
-        WebProcess/WebPage/CoordinatedGraphics/ThreadedDisplayRefreshMonitorWin.cpp
+
+        # The threaded compositor / layer-tree-host scaffolding is shared with
+        # the PlayStation port (PSW = PlayStation + Windows). Each port supplies
+        # its own AcceleratedSurface*.{h,cpp}; everything else above the surface
+        # is the same.
+        WebProcess/WebPage/CoordinatedGraphics/LayerTreeHostPSW.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositorPSW.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ThreadedDisplayRefreshMonitorPSW.cpp
     )
 endif ()

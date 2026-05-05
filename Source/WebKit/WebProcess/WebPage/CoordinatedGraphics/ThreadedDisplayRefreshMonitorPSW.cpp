@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Ian Grunert <ian.grunert@gmail.com>
+ * Copyright (C) 2014 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,12 +24,12 @@
  */
 
 #include "config.h"
-#include "ThreadedDisplayRefreshMonitorWin.h"
+#include "ThreadedDisplayRefreshMonitorPSW.h"
 
 #if USE(COORDINATED_GRAPHICS)
 
 #include "CompositingRunLoop.h"
-#include "ThreadedCompositorWin.h"
+#include "ThreadedCompositorPSW.h"
 
 namespace WebKit {
 
@@ -53,6 +53,9 @@ bool ThreadedDisplayRefreshMonitor::requestRefreshCallback()
         previousFrameDone = isPreviousFrameDone();
     }
 
+    // Only request an update in case we're not currently handling the display
+    // refresh notifications under ThreadedDisplayRefreshMonitor::displayRefreshCallback().
+    // Any such schedule request is handled in that method after the notifications.
     if (previousFrameDone)
         m_client->requestDisplayRefreshMonitorUpdate();
 
@@ -82,12 +85,15 @@ void ThreadedDisplayRefreshMonitor::invalidate()
         wasScheduled = isScheduled();
     }
     if (wasScheduled) {
+        // This is shutting down, so there's no up-to-date DisplayUpdate available.
+        // Instead, the current value is progressed and used for this dispatch.
         m_displayUpdate = m_displayUpdate.nextUpdate();
         displayDidRefresh(m_displayUpdate);
     }
     m_client = nullptr;
 }
 
+// FIXME: Refactor to share more code with DisplayRefreshMonitor::displayLinkFired().
 void ThreadedDisplayRefreshMonitor::displayRefreshCallback()
 {
     bool shouldHandleDisplayRefreshNotification { false };
@@ -105,12 +111,16 @@ void ThreadedDisplayRefreshMonitor::displayRefreshCallback()
     if (shouldHandleDisplayRefreshNotification)
         displayDidRefresh(displayUpdate);
 
+    // Retrieve the scheduled status for this DisplayRefreshMonitor.
     bool hasBeenRescheduled { false };
     {
         Locker locker { lock() };
         hasBeenRescheduled = isScheduled();
     }
 
+    // Notify the compositor about the completed DisplayRefreshMonitor update, passing
+    // along information about any schedule request that might have occurred during
+    // the notification handling.
     if (m_client)
         m_client->handleDisplayRefreshMonitorUpdate(hasBeenRescheduled);
 }

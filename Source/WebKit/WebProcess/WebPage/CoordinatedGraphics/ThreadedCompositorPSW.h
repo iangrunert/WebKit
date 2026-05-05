@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 Ian Grunert <ian.grunert@gmail.com>
+ * Copyright (C) 2014 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,11 @@
 
 #if USE(COORDINATED_GRAPHICS)
 #include "CompositingRunLoop.h"
-#include "ThreadedDisplayRefreshMonitorWin.h"
+#include <WebCore/Damage.h>
 #include <WebCore/DisplayUpdate.h>
 #include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
+#include <WebCore/TextureMapperDamageVisualizer.h>
 #include <atomic>
 #include <optional>
 #include <wtf/Atomics.h>
@@ -39,6 +40,10 @@
 #include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+
+#if !HAVE(DISPLAY_LINK)
+#include "ThreadedDisplayRefreshMonitorPSW.h"
+#endif
 
 namespace WebCore {
 class TextureMapper;
@@ -55,7 +60,11 @@ class ThreadedCompositor : public ThreadSafeRefCounted<ThreadedCompositor>, publ
     WTF_MAKE_NONCOPYABLE(ThreadedCompositor);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ThreadedCompositor);
 public:
+#if HAVE(DISPLAY_LINK)
+    static Ref<ThreadedCompositor> create(LayerTreeHost&);
+#else
     static Ref<ThreadedCompositor> create(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, WebCore::PlatformDisplayID);
+#endif
     virtual ~ThreadedCompositor();
 
     uint64_t surfaceID() const;
@@ -70,7 +79,9 @@ public:
 
     void invalidate();
 
+#if !HAVE(DISPLAY_LINK)
     WebCore::DisplayRefreshMonitor& displayRefreshMonitor() const;
+#endif
 
     void suspend();
     void resume();
@@ -79,16 +90,33 @@ public:
 
     std::optional<float> fps() const { return m_fpsCounter.fps.load(); };
 
+#if ENABLE(DAMAGE_TRACKING)
+    enum class DamagePropagationFlags : uint8_t {
+        Unified = 1 << 0,
+        UseForCompositing = 1 << 1
+    };
+    void setDamagePropagationFlags(std::optional<OptionSet<DamagePropagationFlags>>);
+    void enableFrameDamageNotificationForTesting();
+#endif
+
 private:
+#if HAVE(DISPLAY_LINK)
+    explicit ThreadedCompositor(LayerTreeHost&);
+#else
     ThreadedCompositor(LayerTreeHost&, ThreadedDisplayRefreshMonitor::Client&, WebCore::PlatformDisplayID);
+#endif
 
     void updateSceneState();
     void renderLayerTree();
     void paintToCurrentGLContext(const WebCore::TransformationMatrix&, const WebCore::IntSize&);
     void frameComplete();
 
+#if HAVE(DISPLAY_LINK)
+    void didRenderFrameTimerFired();
+#else
     void displayUpdateFired();
     void sceneUpdateFinished();
+#endif
 
     void updateSceneAttributes(const WebCore::IntSize&, float deviceScaleFactor);
 
@@ -110,7 +138,10 @@ private:
         Lock lock;
         WebCore::IntSize viewportSize;
         float deviceScaleFactor { 1 };
+
+#if !HAVE(DISPLAY_LINK)
         bool clientRendersNextFrame { false };
+#endif
     } m_attributes;
 
     std::unique_ptr<WebCore::TextureMapper> m_textureMapper;
@@ -123,8 +154,19 @@ private:
         std::atomic<std::optional<float>> fps;
     } m_fpsCounter;
 
-    std::atomic<uint32_t> m_compositionRequestID { 0 };
+#if ENABLE(DAMAGE_TRACKING)
+    struct {
+        std::optional<OptionSet<DamagePropagationFlags>> flags;
+        std::unique_ptr<WebCore::TextureMapperDamageVisualizer> visualizer;
+        std::atomic<bool> shouldNotifyFrameDamageForTesting { false };
+    } m_damage;
+#endif
 
+    std::atomic<uint32_t> m_compositionRequestID { 0 };
+#if HAVE(DISPLAY_LINK)
+    std::atomic<uint32_t> m_compositionResponseID { 0 };
+    RunLoop::Timer m_didRenderFrameTimer;
+#else
     struct {
         WebCore::PlatformDisplayID displayID;
         WebCore::DisplayUpdate displayUpdate;
@@ -132,8 +174,10 @@ private:
     } m_display;
 
     const Ref<ThreadedDisplayRefreshMonitor> m_displayRefreshMonitor;
+#endif
 };
 
 } // namespace WebKit
 
 #endif // USE(COORDINATED_GRAPHICS)
+

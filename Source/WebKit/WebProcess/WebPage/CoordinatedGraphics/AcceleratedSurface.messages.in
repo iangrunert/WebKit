@@ -26,6 +26,11 @@
     ExceptionForEnabledBy
 ]
 messages -> AcceleratedSurface {
+    # ReleaseBuffer: UI process tells WebProcess that buffer `id` is free for
+    # re-render. The Windows variant is unused while the SHM render path is
+    # single-buffered; once the D3D11 swap chain lands, the parameter list
+    # gains a sync handle (keyed mutex / ID3D11Fence shared HANDLE) — see
+    # silly-snuggling-scone-d3d-present.md.
 #if OS(WINDOWS)
     ReleaseBuffer(uint64_t id)
 #endif

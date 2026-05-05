@@ -46,9 +46,11 @@ class LayerTreeContext;
 class WebPageProxy;
 class WebProcessProxy;
 
-// Phase 2: receives ShareableBitmap-backed frames from AcceleratedSurfaceWin in
-// the WebProcess and BitBlts them into the host HWND DC. Phase 3 will replace
-// this with a DirectComposition visual fed by D3D11 shared NT handles.
+// Receives ShareableBitmap-backed frames from AcceleratedSurfaceWin in the
+// WebProcess and BitBlts them into the host HWND DC. The eventual D3D11
+// shared-handle + DirectComposition path replaces SHM and per-frame BitBlt
+// here while keeping the same IPC shape — see
+// silly-snuggling-scone-d3d-present.md for the design.
 class AcceleratedBackingStore final : public IPC::MessageReceiver, public RefCounted<AcceleratedBackingStore> {
     WTF_MAKE_TZONE_ALLOCATED(AcceleratedBackingStore);
 public:
