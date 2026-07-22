@@ -29,7 +29,7 @@ private import TestWebKitAPILibrary
 import struct Swift.String
 import struct Foundation.URL
 
-#if compiler(>=6.4)
+#if compiler(>=6.4) && !SWIFT_WEBKIT_TOOLCHAIN
 
 @MainActor
 struct UserContentControllerTests {
@@ -77,6 +77,6 @@ struct UserContentControllerTests {
     }
 }
 
-#endif // compiler(>=6.4)
+#endif // compiler(>=6.4) && !SWIFT_WEBKIT_TOOLCHAIN
 
 #endif // ENABLE_SWIFTUI
