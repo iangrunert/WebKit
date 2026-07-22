@@ -60,6 +60,28 @@ if (SWIFT_REQUIRED)
     string(REPLACE "<CMAKE_Swift_COMPILER>"
         "<CMAKE_Swift_COMPILER> --original-swift-compiler=${ORIGINAL_Swift_COMPILER}"
         CMAKE_Swift_CREATE_STATIC_LIBRARY "${CMAKE_Swift_CREATE_STATIC_LIBRARY}")
+
+    # swiftc-wrapper.sh is a shell script, which works as CMAKE_Swift_COMPILER on
+    # POSIX hosts because it has a shebang and the exec bit. On Windows, Ninja
+    # invokes the compiler through CreateProcess(), which cannot run a script
+    # directly and fails the build with "%1 is not a valid Win32 application".
+    # Prepend a bash interpreter to every Swift rule template so the wrapper runs
+    # through bash instead of being handed to CreateProcess() on its own.
+    if (WIN32)
+        find_program(SWIFT_WRAPPER_INTERPRETER NAMES bash REQUIRED)
+        foreach (_swift_rule
+            CMAKE_Swift_COMPILE_OBJECT
+            CMAKE_Swift_LINK_EXECUTABLE
+            CMAKE_Swift_CREATE_SHARED_LIBRARY
+            CMAKE_Swift_CREATE_SHARED_MODULE
+            CMAKE_Swift_CREATE_STATIC_LIBRARY)
+            if (DEFINED ${_swift_rule})
+                string(REPLACE "<CMAKE_Swift_COMPILER>"
+                    "\"${SWIFT_WRAPPER_INTERPRETER}\" <CMAKE_Swift_COMPILER>"
+                    ${_swift_rule} "${${_swift_rule}}")
+            endif ()
+        endforeach ()
+    endif ()
 endif ()
 
 # -----------------------------------------------------------------------------
