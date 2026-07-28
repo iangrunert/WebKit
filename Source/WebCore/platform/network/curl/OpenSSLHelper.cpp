@@ -184,8 +184,11 @@ WebCore::CertificateInfo::CertificateChain createCertificateChain(X509_STORE_CTX
     return pemDataFromCtx(StackOfX509(ctx));
 }
 
-#if OS(WINDOWS)
-static String toString(const ASN1_STRING* name)
+// Not named toString: unqualified toString(ASN1_STRING*) finds WTF::toString via ADL
+// (StringPrintStream.h is exported to the global namespace by the prefix header), which
+// wins overload resolution over a const ASN1_STRING* parameter and stringifies the
+// pointer as bool, leaving this function unused.
+static String convertASN1StringToString(const ASN1_STRING* name)
 {
     unsigned char* data { nullptr };
     auto length = ASN1_STRING_to_UTF8(&data, name);
@@ -196,7 +199,6 @@ static String toString(const ASN1_STRING* name)
     OPENSSL_free(data);
     return result;
 }
-#endif
 
 static String getSubjectEntry(const X509* x509, int nid)
 {
@@ -216,7 +218,7 @@ static String getSubjectEntry(const X509* x509, int nid)
     if (!entryData)
         return String();
 
-    return toString(entryData);
+    return convertASN1StringToString(entryData);
 }
 
 static String getCommonName(const X509* x509)
@@ -306,7 +308,7 @@ static void getSubjectAltName(const X509* x509, Vector<String>& dnsNames, Vector
             continue;
 
         if (value->type == GEN_DNS) {
-            auto dnsName = toString(value->d.dNSName);
+            auto dnsName = convertASN1StringToString(value->d.dNSName);
             if (!dnsName.isNull())
                 dnsNames.append(WTF::move(dnsName));
         } else if (value->type == GEN_IPADD) {
