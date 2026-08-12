@@ -4784,3 +4784,16 @@ fast/dom/window-opener-setter-throws-if-defineownproperty-fails-1.html [ Skip ] 
 fast/canvas/offscreen-canvas-measureText-unrealized-font-crash.html [ Failure ]
 http/tests/cookies/document-cookie-set-expired-cookie.html [ Skip ] # Crash
 http/wpt/storage-access/request-storage-access-under-opener-cross-site-opener.html [ Skip ] # Crash
+
+# Gardening: unexpected results on recent Win-Tests-EWS runs (builds 97170-97187,
+# testing changes around 318963@main). All five failed in every run, in both the
+# initial and re-run passes, so they are tree issues rather than patch issues.
+
+compositing/geometry/composited-bounds-with-single-axis-clip.html [ Failure ]
+http/wpt/user-activation/bless-edge-cases.sub.html [ Skip ] # Crash; mac-site-isolation also skips this (webkit.org/b/318763)
+
+# Small image diffs (at most 0.01% of pixels). These were covered by generic
+# webkit.org/b/277912 ImageOnlyFailure entries that have been removed at tip of tree.
+webkit.org/b/277912 imported/w3c/web-platform-tests/css/css-borders/corner-shape/corner-shape-inset-shadow.html [ ImageOnlyFailure ]
+webkit.org/b/277912 imported/w3c/web-platform-tests/css/css-borders/corner-shape/corner-shape-notch-mixed.html [ ImageOnlyFailure ]
+webkit.org/b/277912 imported/w3c/web-platform-tests/css/css-borders/corner-shape/corner-shape-superellipse-negative-100.html [ ImageOnlyFailure ]
