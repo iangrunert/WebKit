@@ -9,9 +9,11 @@
 # CMAKE_Swift_COMPILER_LAUNCHER, which testing showed CMake/Ninja can
 # silently fail to apply to some Swift rules).
 
+import os
 import re
 import subprocess
 import sys
+import tempfile
 
 # Swift's C++ interop changes which imported members are @unsafe between
 # toolchain versions, so an `unsafe` that is required on one toolchain emits
@@ -134,14 +136,67 @@ def process_args(argv):
     return real_swiftc, args
 
 
+def quote_response_file_token(arg):
+    if not re.search(r"\s", arg):
+        return arg
+    # Windows argv-unescaping rules (the platform this is actually needed on):
+    # a backslash is literal unless it precedes a quote, and N backslashes
+    # before a quote collapse to N/2.
+    escaped = arg.replace("\\", "\\\\").replace('"', '\\"')
+    return '"' + escaped + '"'
+
+
+def write_response_file(args):
+    fd, path = tempfile.mkstemp(prefix="swiftc-wrapper-", suffix=".rsp")
+    with os.fdopen(fd, "w") as f:
+        for arg in args:
+            f.write(quote_response_file_token(arg))
+            f.write("\n")
+    return path
+
+
 def main(argv):
     real_swiftc, args = process_args(argv)
 
-    process = subprocess.run(
-        [real_swiftc] + args,
-        stdout=sys.stdout,
-        stderr=subprocess.PIPE,
+    # Diagnostic: measure the flat command line's length, independent of
+    # which invocation path below actually gets used, so CI logs show
+    # whether it really approaches Windows' ~32767-character CreateProcess
+    # limit (temporary -- remove once confirmed).
+    flat_command = [real_swiftc] + args
+    flat_command_line = " ".join(flat_command)
+    sys.stderr.write(
+        "swiftc-wrapper: {} args, flat command line is {} characters\n".format(
+            len(flat_command), len(flat_command_line))
     )
+    sys.stderr.write("swiftc-wrapper: " + flat_command_line + "\n")
+    sys.stderr.flush()
+
+    # WebKit's swiftc invocations run tens of thousands of characters long
+    # (hundreds of -I flags); Windows' CreateProcess caps a command line at
+    # ~32767 characters regardless of what launches it, so relay through a
+    # response file rather than risk "FileNotFoundError: [WinError 206] The
+    # filename or extension is too long". Skip this under
+    # -explicit-module-build, though: as with WebKit's own
+    # .platform-swift-args.resp above, the swift driver doesn't expand
+    # @-files in that mode, so it would just see a literal "@path" argument.
+    # -explicit-module-build is Apple-only (PAL_SWIFT_EXPLICIT_MODULE_BUILD),
+    # where the much larger POSIX argument-length limit makes this moot.
+    if "-explicit-module-build" in args:
+        command = flat_command
+        response_file = None
+    else:
+        response_file = write_response_file(args)
+        command = [real_swiftc, "@" + response_file]
+
+    try:
+        process = subprocess.run(
+            command,
+            stdout=sys.stdout,
+            stderr=subprocess.PIPE,
+        )
+    finally:
+        if response_file:
+            os.remove(response_file)
 
     stderr_text = process.stderr.decode(errors="replace")
     filtered_lines = filter_benign_warnings(stderr_text.splitlines(keepends=True))
