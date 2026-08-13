@@ -1065,16 +1065,32 @@ function(_WEBKIT_COMPUTE_SWIFT_SHARED_CLANG_FLAGS _outvar)
     # forwarded here; the wrapper no longer mirrors plain -D to -Xcc.
     set(_flags
         -DENABLE_WEBGPU_SWIFT=1
-        -DJS_EXPORT_PRIVATE=
         -DNODELETE=
-        -DPAL_EXPORT=
         -DUCHAR_TYPE=char16_t
-        -DWEBCORE_EXPORT=
         -DWEBCORE_TESTSUPPORT_EXPORT=
         -DWK_EXPORT=
-        -DWTF_EXPORT_PRIVATE=
         -D__WEBGPU__
     )
+    if (WIN32)
+        # WTF/JSC/WebCore symbols come from JavaScriptCore.dll / WebCore.dll.
+        # The MSVC linker synthesizes import thunks for functions declared
+        # without dllimport, but not for data symbols (e.g. StringImpl::
+        # s_emptyAtomString), so empty stubs break the WebKit2.dll link of
+        # Swift objects. Declare imports the way a C++ consumer TU would.
+        list(APPEND _flags
+            "-DJS_EXPORT_PRIVATE=__declspec(dllimport)"
+            "-DPAL_EXPORT=__declspec(dllimport)"
+            "-DWEBCORE_EXPORT=__declspec(dllimport)"
+            "-DWTF_EXPORT_PRIVATE=__declspec(dllimport)"
+        )
+    else ()
+        list(APPEND _flags
+            -DJS_EXPORT_PRIVATE=
+            -DPAL_EXPORT=
+            -DWEBCORE_EXPORT=
+            -DWTF_EXPORT_PRIVATE=
+        )
+    endif ()
     # iOS WebKit_Internal headers gate textual #imports behind this macro that
     # trip strict cross-module-import-visibility checks (bug 312083).
     if (NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
