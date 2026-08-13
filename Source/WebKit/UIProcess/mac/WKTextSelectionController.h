@@ -25,7 +25,7 @@
 
 #pragma once
 
-#import <wtf/Platform.h>
+#include <wtf/Platform.h>
 
 #if HAVE(APPKIT_GESTURES_SUPPORT)
 

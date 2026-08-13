@@ -198,6 +198,11 @@ public:
     typedef T& reference;
     typedef std::bidirectional_iterator_tag iterator_category;
 
+    // std::reverse_iterator (and the C++20 bidirectional_iterator concept)
+    // requires default-constructibility; MSVC's reverse_iterator value-
+    // initializes its stored iterator member.
+    DequeIterator() = default;
+
     DequeIterator(Deque<T, inlineCapacity>* deque, size_t index)
         : Base(deque, index) { }
 
@@ -233,6 +238,8 @@ public:
     typedef const T* pointer;
     typedef const T& reference;
     typedef std::bidirectional_iterator_tag iterator_category;
+
+    DequeConstIterator() = default;
 
     DequeConstIterator(const Deque<T, inlineCapacity>* deque, size_t index)
         : Base(deque, index) { }

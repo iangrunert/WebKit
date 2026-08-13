@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <wtf/Platform.h>
+#include <wtf/Platform.h>
 
 #if PLATFORM(IOS_FAMILY) || HAVE(NSTEXTPLACEHOLDER_RECTS)
 
