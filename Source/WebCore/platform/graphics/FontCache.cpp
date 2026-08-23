@@ -91,7 +91,14 @@ struct FontDataCacheKeyTraits : WTF::GenericHashTraits<FontPlatformData> {
 
     static const FontPlatformData& emptyValue()
     {
-        static NeverDestroyed<FontPlatformData> key(0.f, false, false);
+        // The sentinel must never compare equal to a real key. A size of 0 is not enough
+        // to guarantee that: with Skia, SkFont normalizes a null typeface to the shared
+        // SkTypeface::MakeEmpty() singleton, so a real key created from that singleton
+        // (e.g. by FontCache::lastResortFallbackFont() when no font matches) with a
+        // computed size of 0 would be indistinguishable from a default-constructed
+        // sentinel and fail HashTable key validation. Real keys always have a
+        // non-negative size, so use a negative size for the sentinel.
+        static NeverDestroyed<FontPlatformData> key(-1.f, false, false);
         return key;
     }
     static void constructDeletedValue(FontPlatformData& slot)
