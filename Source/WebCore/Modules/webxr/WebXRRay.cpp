@@ -35,6 +35,7 @@
 #include "WebXRRigidTransform.h"
 #include "XRRayDirectionInit.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
+#include <wtf/MathExtras.h>
 
 namespace WebCore {
 
@@ -51,7 +52,7 @@ ExceptionOr<Ref<WebXRRay>> WebXRRay::create(const DOMPointInit& origin, const XR
         return Exception { ExceptionCode::TypeError };
     Ref<DOMPointReadOnly> dpOrigin = DOMPointReadOnly::fromPoint(origin);
     std::optional<Ref<DOMPointReadOnly>> dpDirection;
-    double length = std::hypot(direction.x, direction.y, direction.z);
+    double length = WTF::hypot3(direction.x, direction.y, direction.z);
     if (length)
         dpDirection = DOMPointReadOnly::create(direction.x / length, direction.y / length, direction.z / length, 0);
     else
