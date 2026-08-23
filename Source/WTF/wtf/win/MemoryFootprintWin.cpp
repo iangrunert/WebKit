@@ -75,11 +75,18 @@ size_t memoryFootprint()
         return std::max(minNumberOfEntries, numberOfEntries + numberOfEntries / 4 + 1);
     };
 
-    for (size_t numberOfEntries = updateNumberOfEntries(workingSetsOnStack->NumberOfEntries);;) {
+    // A working set of 16M pages covers 64GB of referenced memory; if QueryWorkingSet
+    // still reports ERROR_BAD_LENGTH for a buffer this large, it is not making progress
+    // (Wine's QueryWorkingSet unconditionally fails with ERROR_BAD_LENGTH) and retrying
+    // with ever larger buffers would end in a failed huge allocation.
+    constexpr const size_t maxNumberOfEntries = 16 * 1024 * 1024;
+    for (size_t numberOfEntries = updateNumberOfEntries(workingSetsOnStack->NumberOfEntries); numberOfEntries <= maxNumberOfEntries;) {
         size_t workingSetSizeInBytes = roundUpToMultipleOf(sizeof(PSAPI_WORKING_SET_INFORMATION), sizeof(PSAPI_WORKING_SET_INFORMATION) + sizeof(PSAPI_WORKING_SET_BLOCK) * numberOfEntries);
 
-        auto workingSets = MallocSpan<PSAPI_WORKING_SET_INFORMATION>::malloc(workingSetSizeInBytes);
+        auto workingSets = MallocSpan<PSAPI_WORKING_SET_INFORMATION>::tryMalloc(workingSetSizeInBytes);
         auto workingSetsSpan = workingSets.mutableSpan();
+        if (workingSetsSpan.empty())
+            return 0;
         if (QueryWorkingSet(process.get(), workingSetsSpan.data(), workingSetsSpan.size_bytes()))
             return countSizeOfPrivateWorkingSet(workingSetsSpan[0]);
 
@@ -87,6 +94,7 @@ size_t memoryFootprint()
             return 0;
         numberOfEntries = updateNumberOfEntries(workingSetsSpan[0].NumberOfEntries);
     }
+    return 0;
 }
 
 }
