@@ -232,7 +232,7 @@ JSC_DEFINE_HOST_FUNCTION(mathProtoFuncHypot, (JSGlobalObject* globalObject, Call
 #else
         if (std::isnan(arg0) || std::isnan(arg1) || std::isnan(arg2))
             return JSValue::encode(jsNaN());
-        return JSValue::encode(jsDoubleNumber(std::hypot(arg0, arg1, arg2)));
+        return JSValue::encode(jsDoubleNumber(WTF::hypot3(arg0, arg1, arg2)));
 #endif
     }
 

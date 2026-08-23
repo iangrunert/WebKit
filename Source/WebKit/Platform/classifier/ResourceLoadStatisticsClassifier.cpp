@@ -28,13 +28,14 @@
 
 #include "Logging.h"
 #include <WebCore/ResourceLoadStatistics.h>
+#include <wtf/MathExtras.h>
 
 namespace WebKit {
 using namespace WebCore;
 
 static double NODELETE vectorLength(unsigned a, unsigned b, unsigned c)
 {
-    return std::hypot(a, b, c);
+    return WTF::hypot3(a, b, c);
 }
 
 static const auto featureVectorLengthThresholdHigh = 3;

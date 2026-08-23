@@ -106,7 +106,7 @@ Ref<const TransformFunctionBase> RotateTransformFunction::blend(const TransformF
     // angle is used or (0, 0, 1) if both angles are zero.
 
     auto normalizedVector = [](const RotateTransformFunction& op) -> FloatPoint3D {
-        if (auto length = std::hypot(op.m_x.value, op.m_y.value, op.m_z.value))
+        if (auto length = WTF::hypot3(op.m_x.value, op.m_y.value, op.m_z.value))
             return { static_cast<float>(op.m_x.value / length), static_cast<float>(op.m_y.value / length), static_cast<float>(op.m_z.value / length) };
         return { };
     };
@@ -147,7 +147,7 @@ Ref<const TransformFunctionBase> RotateTransformFunction::blend(const TransformF
     double x = decomposed.quaternion.x;
     double y = decomposed.quaternion.y;
     double z = decomposed.quaternion.z;
-    double length = std::hypot(x, y, z);
+    double length = WTF::hypot3(x, y, z);
     double angle = 0;
 
     if (length > 0.00001) {

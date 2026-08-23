@@ -325,7 +325,7 @@ template<typename ColorType1, typename ColorType2> constexpr float computeDeltaE
     auto deltaA = a1 - a2;
     auto deltaB = b1 - b2;
 
-    return std::hypot(deltaL, deltaA, deltaB);
+    return WTF::hypot3(deltaL, deltaA, deltaB);
 }
 
 // MARK: Gamut mapping algorithms.
