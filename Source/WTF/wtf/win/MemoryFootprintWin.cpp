@@ -27,16 +27,83 @@
 #include <wtf/MemoryFootprint.h>
 
 #include <algorithm>
+#include <optional>
 #include <type_traits>
 #include <windows.h>
 #include <psapi.h>
 #include <wtf/MallocSpan.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Vector.h>
 #include <wtf/win/Win32Handle.h>
 
 namespace WTF {
 
-size_t memoryFootprint()
+// Compute the size of the private working set by walking the committed regions of the
+// address space with VirtualQuery and querying per-page attributes with
+// QueryWorkingSetEx over fixed-size batches of pages.
+//
+// Unlike QueryWorkingSet, this does not negotiate an output buffer sized by the whole
+// working set (a protocol that is inherently racy against working set growth and
+// requires trusting a length field that is only defined on the ERROR_BAD_LENGTH path),
+// so it runs in bounded memory with no retry loop. It also works under Wine, whose
+// NtQueryVirtualMemory implements MemoryWorkingSetExInformation (backed by the host's
+// page tables) but not MemoryWorkingSetInformation.
+static std::optional<size_t> memoryFootprintFromWorkingSetEx()
+{
+    constexpr size_t batchSize = 16 * 1024;
+    Vector<PSAPI_WORKING_SET_EX_INFORMATION> batch;
+    batch.reserveInitialCapacity(batchSize);
+
+    size_t pageSize = 0;
+    size_t numberOfPrivateResidentPages = 0;
+    bool sawSuccessfulQuery = false;
+
+    auto flushBatch = [&] () -> bool {
+        if (batch.isEmpty())
+            return true;
+        // Wine only supports querying the current process, and only through the
+        // NtCurrentProcess() pseudo handle, which is what GetCurrentProcess() returns.
+        if (!QueryWorkingSetEx(GetCurrentProcess(), batch.mutableSpan().data(), batch.size() * sizeof(PSAPI_WORKING_SET_EX_INFORMATION)))
+            return false;
+        sawSuccessfulQuery = true;
+        for (auto& entry : batch) {
+            if (entry.VirtualAttributes.Valid && !entry.VirtualAttributes.Shared)
+                numberOfPrivateResidentPages++;
+        }
+        batch.shrink(0);
+        return true;
+    };
+
+    SYSTEM_INFO systemInfo;
+    GetSystemInfo(&systemInfo);
+    pageSize = systemInfo.dwPageSize;
+    if (!pageSize)
+        return std::nullopt;
+
+    MEMORY_BASIC_INFORMATION memoryInfo;
+    uintptr_t address = reinterpret_cast<uintptr_t>(systemInfo.lpMinimumApplicationAddress);
+    uintptr_t maximumAddress = reinterpret_cast<uintptr_t>(systemInfo.lpMaximumApplicationAddress);
+    while (address < maximumAddress && VirtualQuery(reinterpret_cast<LPCVOID>(address), &memoryInfo, sizeof(memoryInfo)) == sizeof(memoryInfo)) {
+        if (memoryInfo.State == MEM_COMMIT) {
+            uintptr_t regionEnd = reinterpret_cast<uintptr_t>(memoryInfo.BaseAddress) + memoryInfo.RegionSize;
+            for (uintptr_t page = reinterpret_cast<uintptr_t>(memoryInfo.BaseAddress); page < regionEnd; page += pageSize) {
+                batch.append({ reinterpret_cast<PVOID>(page), { } });
+                if (batch.size() == batchSize && !flushBatch())
+                    return std::nullopt;
+            }
+        }
+        uintptr_t next = reinterpret_cast<uintptr_t>(memoryInfo.BaseAddress) + memoryInfo.RegionSize;
+        if (next <= address)
+            break;
+        address = next;
+    }
+    if (!flushBatch() || !sawSuccessfulQuery)
+        return std::nullopt;
+
+    return numberOfPrivateResidentPages * pageSize;
+}
+
+static size_t memoryFootprintFromWorkingSetList()
 {
     // We would like to calculate size of private working set.
     // https://msdn.microsoft.com/en-us/library/windows/desktop/ms684891(v=vs.85).aspx
@@ -103,6 +170,13 @@ size_t memoryFootprint()
         numberOfEntries = updateNumberOfEntries(workingSetsSpan[0].NumberOfEntries);
     }
     return 0;
+}
+
+size_t memoryFootprint()
+{
+    if (auto footprint = memoryFootprintFromWorkingSetEx())
+        return *footprint;
+    return memoryFootprintFromWorkingSetList();
 }
 
 }
