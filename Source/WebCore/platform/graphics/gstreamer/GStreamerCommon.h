@@ -35,10 +35,6 @@
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/CStringView.h>
 
-#if USE(GSTREAMER_GL)
-#include "GraphicsTypesGL.h"
-#endif
-
 namespace WebCore {
 
 class FloatSize;
@@ -242,7 +238,7 @@ public:
     bool operator!() const { return !m_frame.buffer; }
 
 #if USE(GSTREAMER_GL)
-    GLuint textureID(int) const;
+    unsigned textureID(int) const;
 #endif
 
     unsigned componentPlane(int) const;

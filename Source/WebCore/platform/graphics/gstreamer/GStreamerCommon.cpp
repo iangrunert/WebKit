@@ -953,11 +953,11 @@ size_t GstMappedFrame::planeHeight(uint32_t planeIndex) const
 }
 
 #if USE(GSTREAMER_GL)
-GLuint GstMappedFrame::textureID(int planeIndex) const
+unsigned GstMappedFrame::textureID(int planeIndex) const
 {
     RELEASE_ASSERT(isValid());
     RELEASE_ASSERT(m_frame.map->flags & GST_MAP_GL);
-    return *reinterpret_cast<GLuint*>(m_frame.data[planeIndex]);
+    return *reinterpret_cast<unsigned*>(m_frame.data[planeIndex]);
 }
 #endif
 
