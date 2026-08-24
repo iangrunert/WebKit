@@ -52,6 +52,9 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
     elseif (DEFINED WEBKIT_MAX_BUNDLE_SIZE)
         list(APPEND gusb_args --max-bundle-size ${WEBKIT_MAX_BUNDLE_SIZE} --enforce-cost)
     endif ()
+    if (DEFINED WEBKIT_UNIFIED_AUTO_COST_KB)
+        list(APPEND gusb_args --auto-cost-kb ${WEBKIT_UNIFIED_AUTO_COST_KB})
+    endif ()
 
     if (ENABLE_UNIFIED_BUILDS)
         # One pass generates the bundles (stdout = files to compile) and writes the

@@ -109,6 +109,18 @@ class SourceFile:
             ext = self.path.suffix.lstrip('.')
             self.bundle_manager_key = f'.header-{self._header_group}-{ext}'
 
+        # Complement @cost annotations with a cost derived from source size, so
+        # large sources automatically land in sparse bundles. The larger of the
+        # two wins: annotations capture compile costs size cannot (e.g. dense
+        # template instantiation), the size floor protects small cost budgets
+        # from files whose annotated cost was calibrated for a much larger one.
+        # Derived sources do not exist at generation time and keep their
+        # annotated or default cost.
+        if args.auto_cost_kb:
+            tree_path = args.source_tree_path / self.path
+            if tree_path.exists():
+                self.cost = max(self.cost, -(-tree_path.stat().st_size // (args.auto_cost_kb * 1024)))
+
     def sort_key(self):
         return self.path.parent.parts, self.file_index, self.path.name
 
@@ -257,6 +269,10 @@ def parse_args():
                         help='The number of files to merge into a single bundle (default: 8).')
     parser.add_argument('--enforce-cost', action='store_true', default=False,
                         help='Honor @cost annotations when packing bundles.')
+    parser.add_argument('--auto-cost-kb', type=int, default=0,
+                        help='Derive the packing cost of sources without a @cost annotation '
+                             'from their size, counting one cost unit per this many KiB '
+                             '(0 disables size-derived costs).')
     parser.add_argument('--ignore-header-groups', action='store_true', default=False,
                         help='Ignore @header annotations and bundle those files by directory '
                              '(the prefix they need is carried by the build PCH instead).')

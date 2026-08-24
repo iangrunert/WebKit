@@ -214,12 +214,13 @@ if (NOT DEFINED WEBKIT_MAX_BUNDLE_SIZE)
     set(WEBKIT_MAX_BUNDLE_SIZE 32)
 endif ()
 
-# JavaScriptCore's sources (DFG, FTL, B3) are individually large, so big
-# bundles compile slower in total and produce translation units that take
-# many minutes each, hurting build parallelism. Its Sources.txt has no
-# @cost annotations to counter that, so keep its bundles small.
-if (NOT DEFINED WEBKIT_MAX_BUNDLE_SIZE_JavaScriptCore)
-    set(WEBKIT_MAX_BUNDLE_SIZE_JavaScriptCore 16)
+# Complement the sparse manual @cost annotations with costs derived from
+# source size, one unit per 32KiB. Individually large sources (like the
+# JavaScriptCore DFG/FTL/B3 compilers) then land in sparse bundles
+# automatically instead of forming translation units that take many
+# minutes each and stall the tail of the build.
+if (NOT DEFINED WEBKIT_UNIFIED_AUTO_COST_KB)
+    set(WEBKIT_UNIFIED_AUTO_COST_KB 32)
 endif ()
 
 set(bmalloc_LIBRARY_TYPE OBJECT)
