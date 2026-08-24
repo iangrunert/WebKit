@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier, size_t saltLength, size_t keySizeInBytes)
+static std::optional<Vector<uint8_t>> gcryptSignRSA_PSS(gcry_sexp_t keySexp, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier, size_t saltLength, size_t keySizeInBytes)
 {
     // Perform digest operation with the specified algorithm on the given data.
     Vector<uint8_t> dataHash;
@@ -86,7 +86,7 @@ static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vect
     return mpiZeroPrefixedData(sSexp, keySizeInBytes);
 }
 
-static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier, size_t saltLength)
+static std::optional<bool> gcryptVerifyRSA_PSS(gcry_sexp_t keySexp, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier, size_t saltLength)
 {
     // Perform digest operation with the specified algorithm on the given data.
     Vector<uint8_t> dataHash;
@@ -137,7 +137,7 @@ static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_PSS::platformSign(const CryptoAlgorithmRsaPssParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& data)
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!(key.keySizeInBits() % 8));
-    auto output = gcryptSign(key.platformKey(), data, key.hashAlgorithmIdentifier(), parameters.saltLength, key.keySizeInBits() / 8);
+    auto output = gcryptSignRSA_PSS(key.platformKey(), data, key.hashAlgorithmIdentifier(), parameters.saltLength, key.keySizeInBits() / 8);
     if (!output)
         return Exception { ExceptionCode::OperationError };
     return WTF::move(*output);
@@ -145,7 +145,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_PSS::platformSign(const CryptoAl
 
 ExceptionOr<bool> CryptoAlgorithmRSA_PSS::platformVerify(const CryptoAlgorithmRsaPssParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
 {
-    auto output = gcryptVerify(key.platformKey(), signature, data, key.hashAlgorithmIdentifier(), parameters.saltLength);
+    auto output = gcryptVerifyRSA_PSS(key.platformKey(), signature, data, key.hashAlgorithmIdentifier(), parameters.saltLength);
     if (!output)
         return Exception { ExceptionCode::OperationError };
     return WTF::move(*output);

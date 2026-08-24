@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier, size_t keySizeInBytes)
+static std::optional<Vector<uint8_t>> gcryptSignRSASSA_PKCS1_v1_5(gcry_sexp_t keySexp, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier, size_t keySizeInBytes)
 {
     // Perform digest operation with the specified algorithm on the given data.
     Vector<uint8_t> dataHash;
@@ -85,7 +85,7 @@ static std::optional<Vector<uint8_t>> gcryptSign(gcry_sexp_t keySexp, const Vect
     return mpiZeroPrefixedData(sSexp, keySizeInBytes);
 }
 
-static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier)
+static std::optional<bool> gcryptVerifyRSASSA_PKCS1_v1_5(gcry_sexp_t keySexp, const Vector<uint8_t>& signature, const Vector<uint8_t>& data, CryptoAlgorithmIdentifier hashAlgorithmIdentifier)
 {
     // Perform digest operation with the specified algorithm on the given data.
     Vector<uint8_t> dataHash;
@@ -136,7 +136,7 @@ static std::optional<bool> gcryptVerify(gcry_sexp_t keySexp, const Vector<uint8_
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSASSA_PKCS1_v1_5::platformSign(const CryptoKeyRSA& key, const Vector<uint8_t>& data)
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!(key.keySizeInBits() % 8));
-    auto output = gcryptSign(key.platformKey(), data, key.hashAlgorithmIdentifier(), key.keySizeInBits() / 8);
+    auto output = gcryptSignRSASSA_PKCS1_v1_5(key.platformKey(), data, key.hashAlgorithmIdentifier(), key.keySizeInBits() / 8);
     if (!output)
         return Exception { ExceptionCode::OperationError };
     return WTF::move(*output);
@@ -144,7 +144,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSASSA_PKCS1_v1_5::platformSign(cons
 
 ExceptionOr<bool> CryptoAlgorithmRSASSA_PKCS1_v1_5::platformVerify(const CryptoKeyRSA& key, const Vector<uint8_t>& signature, const Vector<uint8_t>& data)
 {
-    auto output = gcryptVerify(key.platformKey(), signature, data, key.hashAlgorithmIdentifier());
+    auto output = gcryptVerifyRSASSA_PKCS1_v1_5(key.platformKey(), signature, data, key.hashAlgorithmIdentifier());
     if (!output)
         return Exception { ExceptionCode::OperationError };
     return *output;
