@@ -203,6 +203,25 @@ endif ()
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+
+# Large unified-source bundles substantially reduce clean-build time by
+# amortizing header parsing across more sources, as on macOS (OptionsCocoa
+# sets 128). Enabling this also turns on @cost enforcement, which packs the
+# heaviest sources (the generated JS bindings and style code) into sparser
+# bundles. 32 keeps the peak GCC memory of those bundles at a level that
+# 4-core/16GB build machines can sustain at full parallelism.
+if (NOT DEFINED WEBKIT_MAX_BUNDLE_SIZE)
+    set(WEBKIT_MAX_BUNDLE_SIZE 32)
+endif ()
+
+# JavaScriptCore's sources (DFG, FTL, B3) are individually large, so big
+# bundles compile slower in total and produce translation units that take
+# many minutes each, hurting build parallelism. Its Sources.txt has no
+# @cost annotations to counter that, so keep its bundles small.
+if (NOT DEFINED WEBKIT_MAX_BUNDLE_SIZE_JavaScriptCore)
+    set(WEBKIT_MAX_BUNDLE_SIZE_JavaScriptCore 16)
+endif ()
+
 set(bmalloc_LIBRARY_TYPE OBJECT)
 set(WTF_LIBRARY_TYPE OBJECT)
 set(JavaScriptCore_LIBRARY_TYPE OBJECT)
