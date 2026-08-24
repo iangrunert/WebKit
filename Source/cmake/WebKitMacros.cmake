@@ -261,6 +261,23 @@ function(WEBKIT_ADD_PREFIX_HEADER_WITH_PARENT _target _base_target _header _pare
     endif ()
 endfunction()
 
+function(_WEBKIT_SUBTARGET_WIRE_DEPENDENCIES _target _parent)
+    set(_deps "")
+    if (${_parent}_DEPENDENCIES)
+        list(APPEND _deps ${${_parent}_DEPENDENCIES})
+    endif ()
+    # A subtarget prefix header may include the parent's staged framework
+    # headers (e.g. <JavaScriptCore/...>), so it must also wait for the
+    # parent's _CopyHeaders/_CopyPrivateHeaders targets, which the parent
+    # carries in its INTERFACE_DEPENDENCIES for consumers.
+    if (${_parent}_INTERFACE_DEPENDENCIES)
+        list(APPEND _deps ${${_parent}_INTERFACE_DEPENDENCIES})
+    endif ()
+    if (_deps)
+        add_dependencies(${_target} ${_deps})
+    endif ()
+endfunction()
+
 function(WEBKIT_DEFINE_SUBTARGET _target _parent)
     add_library(${_target} OBJECT)
     target_sources(${_target} PRIVATE ${${_parent}_HEADERS} ${ARGN})
@@ -269,9 +286,11 @@ function(WEBKIT_DEFINE_SUBTARGET _target _parent)
     target_compile_definitions(${_target} PRIVATE ${_parent}_EXPORTS $<TARGET_PROPERTY:${_parent},COMPILE_DEFINITIONS>)
     target_compile_options(${_target} PRIVATE $<TARGET_PROPERTY:${_parent},COMPILE_OPTIONS>)
     target_link_libraries(${_target} PRIVATE $<TARGET_PROPERTY:${_parent},LINK_LIBRARIES>)
-    if (${_parent}_DEPENDENCIES)
-        add_dependencies(${_target} ${${_parent}_DEPENDENCIES})
-    endif ()
+    # Subtargets are declared before WEBKIT_FRAMEWORK(), so the parent's
+    # dependency lists may not be fully populated yet; wire them up at the
+    # end of the directory scope instead.
+    cmake_language(EVAL CODE
+        "cmake_language(DEFER CALL _WEBKIT_SUBTARGET_WIRE_DEPENDENCIES [[${_target}]] [[${_parent}]])")
 endfunction()
 
 macro(WEBKIT_DEFINE_SUBTARGET_WITH_PREFIX _target _subtarget)
