@@ -677,6 +677,15 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 WEBKIT_ADD_TARGET_THREAD_SAFETY_WARNINGS(WTF)
 WEBKIT_ADD_TARGET_UNSAFE_BUFFER_WARNINGS(WTF)
 
+file(MAKE_DIRECTORY ${WTF_SCRIPTS_DIR})
+
+message(STATUS "Copying generate-unified-source-bundles.py to: ${WTF_SCRIPTS_DIR}")
+
+file(COPY
+    ../Scripts/generate-unified-source-bundles.py
+    DESTINATION ${WTF_SCRIPTS_DIR}
+)
+
 WEBKIT_COMPUTE_SOURCES(WTF)
 
 WEBKIT_COPY_FILES(WTF_CopyHeaders
@@ -721,15 +730,6 @@ else ()
         text/StringCommon.cpp
         PROPERTIES COMPILE_FLAGS "-Wno-error=undef -Wno-undef")
 endif ()
-
-file(MAKE_DIRECTORY ${WTF_SCRIPTS_DIR})
-
-message(STATUS "Copying generate-unified-source-bundles.py to: ${WTF_SCRIPTS_DIR}")
-
-file(COPY
-    ../Scripts/generate-unified-source-bundles.py
-    DESTINATION ${WTF_SCRIPTS_DIR}
-)
 
 set(WTF_PREFERENCES
     ../Scripts/GeneratePreferences.rb
