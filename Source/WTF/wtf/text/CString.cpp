@@ -175,10 +175,10 @@ bool CStringHash::equal(const CString& a, const CString& b)
     return a == b;
 }
 
-enum class ASCIICase { Lower, Upper };
+enum class CStringASCIICase { Lower, Upper };
 
-template<ASCIICase type>
-CString convertASCIICase(std::span<const char8_t> input)
+template<CStringASCIICase type>
+CString convertCStringASCIICase(std::span<const char8_t> input)
 {
     if (input.empty())
         return CString(""_s);
@@ -187,18 +187,18 @@ CString convertASCIICase(std::span<const char8_t> input)
     auto result = CString::newUninitialized(input.size(), characters);
     size_t i = 0;
     for (auto character : input)
-        characters[i++] = type == ASCIICase::Lower ? toASCIILower(character) : toASCIIUpper(character);
+        characters[i++] = type == CStringASCIICase::Lower ? toASCIILower(character) : toASCIIUpper(character);
     return result;
 }
 
 CString convertToASCIILowercase(std::span<const char8_t> string)
 {
-    return convertASCIICase<ASCIICase::Lower>(string);
+    return convertCStringASCIICase<CStringASCIICase::Lower>(string);
 }
 
 CString convertToASCIIUppercase(std::span<const char8_t> string)
 {
-    return convertASCIICase<ASCIICase::Upper>(string);
+    return convertCStringASCIICase<CStringASCIICase::Upper>(string);
 }
 
 } // namespace WTF
