@@ -38,7 +38,6 @@ namespace TestWebKitAPI {
 
 static bool loadBeforeCrash = false;
 static bool clientTerminationHandlerCalled = false;
-static bool crashHandlerCalled = false;
 
 static void didFinishNavigation(WKPageRef page, WKNavigationRef navigation, WKTypeRef userData, const void* clientInfo)
 {
@@ -63,6 +62,9 @@ static void webProcessWasTerminatedByClient(WKPageRef page, WKProcessTermination
     clientTerminationHandlerCalled = true;
 }
 
+#if !PLATFORM(WIN)
+static bool crashHandlerCalled = false;
+
 static void webProcessCrashed(WKPageRef page, WKProcessTerminationReason reason, const void* clientInfo)
 {
     // Test if first load actually worked.
@@ -75,6 +77,7 @@ static void webProcessCrashed(WKPageRef page, WKProcessTerminationReason reason,
 
     crashHandlerCalled = true;
 }
+#endif // !PLATFORM(WIN)
 
 TEST(WebKit, ProcessDidTerminateRequestedByClient)
 {
@@ -100,6 +103,8 @@ TEST(WebKit, ProcessDidTerminateRequestedByClient)
     Util::run(&clientTerminationHandlerCalled);
 }
 
+// Windows has no way to send SIGKILL to the WebProcess to simulate a crash.
+#if !PLATFORM(WIN)
 TEST(WebKit, ProcessDidTerminateWithReasonCrash)
 {
     WKRetainPtr<WKContextRef> context = adoptWK(WKContextCreateWithConfiguration(nullptr));
@@ -124,6 +129,7 @@ TEST(WebKit, ProcessDidTerminateWithReasonCrash)
 
     Util::run(&crashHandlerCalled);
 }
+#endif // !PLATFORM(WIN)
 
 } // namespace TestWebKitAPI
 
