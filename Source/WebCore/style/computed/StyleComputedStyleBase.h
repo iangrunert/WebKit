@@ -833,7 +833,8 @@ public:
         PREFERRED_TYPE(bool) unsigned char isZoomed : 1;
 
 #if ENABLE(TEXT_AUTOSIZING)
-        unsigned autosizeStatus : 5;
+        // Must be `unsigned char` like the fields above so that it shares their storage under the MSVC ABI, which does not pack adjacent bit-fields of differing types.
+        unsigned char autosizeStatus : 5;
 #endif
         // Total = 63 bits (fits in 8 bytes)
     };
