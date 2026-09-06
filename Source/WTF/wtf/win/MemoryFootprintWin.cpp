@@ -69,17 +69,32 @@ size_t memoryFootprint()
     if (QueryWorkingSet(process.get(), workingSetsOnStack, sizeOfBufferOnStack))
         return countSizeOfPrivateWorkingSet(*workingSetsOnStack);
 
+    // NumberOfEntries is only meaningful when QueryWorkingSet failed because the buffer
+    // was too small. On any other failure the buffer contents are unspecified: the call
+    // may not have written anything, and sizing the retry buffer from it would use
+    // uninitialized stack memory (Wine's NtQueryVirtualMemory does not implement
+    // MemoryWorkingSetInformation at all and fails with ERROR_INVALID_PARAMETER without
+    // touching the buffer).
+    if (GetLastError() != ERROR_BAD_LENGTH)
+        return 0;
+
     auto updateNumberOfEntries = [&] (size_t numberOfEntries) {
         // If working set increases between first QueryWorkingSet and second QueryWorkingSet, the second one can fail.
         // At that time, we should increase numberOfEntries.
         return std::max(minNumberOfEntries, numberOfEntries + numberOfEntries / 4 + 1);
     };
 
-    for (size_t numberOfEntries = updateNumberOfEntries(workingSetsOnStack->NumberOfEntries);;) {
+    // A working set of 16M pages covers 64GB of referenced memory; if QueryWorkingSet
+    // still reports ERROR_BAD_LENGTH for a buffer this large, it is not making progress
+    // and retrying with ever larger buffers would end in a failed huge allocation.
+    constexpr const size_t maxNumberOfEntries = 16 * 1024 * 1024;
+    for (size_t numberOfEntries = updateNumberOfEntries(workingSetsOnStack->NumberOfEntries); numberOfEntries <= maxNumberOfEntries;) {
         size_t workingSetSizeInBytes = roundUpToMultipleOf(sizeof(PSAPI_WORKING_SET_INFORMATION), sizeof(PSAPI_WORKING_SET_INFORMATION) + sizeof(PSAPI_WORKING_SET_BLOCK) * numberOfEntries);
 
-        auto workingSets = MallocSpan<PSAPI_WORKING_SET_INFORMATION>::malloc(workingSetSizeInBytes);
+        auto workingSets = MallocSpan<PSAPI_WORKING_SET_INFORMATION>::tryMalloc(workingSetSizeInBytes);
         auto workingSetsSpan = workingSets.mutableSpan();
+        if (workingSetsSpan.empty())
+            return 0;
         if (QueryWorkingSet(process.get(), workingSetsSpan.data(), workingSetsSpan.size_bytes()))
             return countSizeOfPrivateWorkingSet(workingSetsSpan[0]);
 
@@ -87,6 +102,7 @@ size_t memoryFootprint()
             return 0;
         numberOfEntries = updateNumberOfEntries(workingSetsSpan[0].NumberOfEntries);
     }
+    return 0;
 }
 
 }
