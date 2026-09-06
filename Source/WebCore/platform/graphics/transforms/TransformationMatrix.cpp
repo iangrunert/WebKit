@@ -374,7 +374,7 @@ static void NODELETE v4MulPointByMatrix(const Vector4& p, const TransformationMa
 
 static double NODELETE v3Length(const Vector3& a)
 {
-    return std::hypot(a[0], a[1], a[2]);
+    return WTF::hypot3(a[0], a[1], a[2]);
 }
 
 static void NODELETE v3Scale(Vector3& v, double desiredLength)
@@ -1018,7 +1018,7 @@ static double NODELETE roundEpsilonToZero(double val)
 TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double z, double angle, RotationSnapping snapping)
 {
     // Normalize the axis of rotation
-    double length = std::hypot(x, y, z);
+    double length = WTF::hypot3(x, y, z);
     if (length == 0) {
         // A direction vector that cannot be normalized, such as [0, 0, 0], will cause the rotation to not be applied.
         return *this;

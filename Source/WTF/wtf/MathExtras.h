@@ -163,6 +163,23 @@ constexpr T fabsConstExpr(T value)
     return value;
 }
 
+// Three-argument std::hypot. On Windows, the MSVC STL dispatches the
+// three-argument std::hypot overloads to __std_smf_hypot3 in msvcp140_2.dll
+// (the "special math" satellite DLL). Calling it adds a runtime dependency on
+// that DLL and crashes under Wine, which does not implement the export.
+// Compose the two-argument std::hypot (implemented in ucrtbase) instead; the
+// result can differ from a fused three-argument hypot in the least
+// significant bit.
+template<typename T, typename U, typename V>
+auto hypot3(T x, U y, V z)
+{
+#if OS(WINDOWS)
+    return std::hypot(std::hypot(x, y), z);
+#else
+    return std::hypot(x, y, z);
+#endif
+}
+
 } // namespace WTF
 
 inline double roundTowardsPositiveInfinity(double value) { return std::floor(value + 0.5); }
@@ -1083,6 +1100,7 @@ using WTF::clz;
 using WTF::ctz;
 using WTF::getLSBSet;
 using WTF::getMSBSet;
+using WTF::hypot3;
 using WTF::isNaNConstExpr;
 using WTF::fabsConstExpr;
 using WTF::reverseBits32;

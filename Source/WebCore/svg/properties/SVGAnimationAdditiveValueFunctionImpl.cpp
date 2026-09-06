@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SVGAnimationAdditiveValueFunctionImpl.h"
 
+#include <wtf/MathExtras.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -39,7 +40,7 @@ std::optional<float> SVGAnimationColorFunction::calculateDistance(SVGElement& ta
     float green = simpleFrom.green - simpleTo.green;
     float blue = simpleFrom.blue - simpleTo.blue;
 
-    return std::hypot(red, green, blue);
+    return WTF::hypot3(red, green, blue);
 }
 
 std::optional<float> SVGAnimationIntegerFunction::calculateDistance(SVGElement&, const String& from, const String& to) const
