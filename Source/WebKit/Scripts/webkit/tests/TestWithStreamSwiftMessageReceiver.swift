@@ -46,30 +46,42 @@ final class TestWithStreamSwiftWeakRef: @unchecked Sendable {
                 return
             }
             Task.immediateOnMainActor {
-                await Self.runSendString(
+                await SendStringInvocation(
                     target: target,
                     connection: connection,
                     url: url
-                )
+                ).run()
             }
         }
     }
 
-    @MainActor
-    private static func runSendString(
-        target: TestWithStreamSwift,
-        connection: IPC.StreamServerConnection,
-        url: WTF.String
-    ) async {
-        do {
-            try await mayThrowInvalidMessage(
-                target.sendString(
-                    connection: connection,
-                    url: url
+    private final class SendStringInvocation {
+        private let target: TestWithStreamSwift
+        private let connection: IPC.StreamServerConnection
+        private let url: WTF.String
+
+        init(
+            target: TestWithStreamSwift,
+            connection: IPC.StreamServerConnection,
+            url: WTF.String
+        ) {
+            self.target = target
+            self.connection = connection
+            self.url = url
+        }
+
+        @MainActor
+        func run() async {
+            do {
+                try await mayThrowInvalidMessage(
+                    target.sendString(
+                        connection: connection,
+                        url: url
+                    )
                 )
-            )
-        } catch {
-            markMessageInvalid(error, on: connection)
+            } catch {
+                markMessageInvalid(error, on: connection)
+            }
         }
     }
 
@@ -84,34 +96,48 @@ final class TestWithStreamSwiftWeakRef: @unchecked Sendable {
                 return
             }
             Task.immediateOnMainActor {
-                await Self.runSendStringSync(
+                await SendStringSyncInvocation(
                     target: target,
                     connection: connection,
                     url: url,
                     completionHandler: completionHandler
-                )
+                ).run()
             }
         }
     }
 
-    @MainActor
-    private static func runSendStringSync(
-        target: TestWithStreamSwift,
-        connection: IPC.StreamServerConnection,
-        url: WTF.String,
-        completionHandler: CompletionHandlers.TestWithStreamSwift.SendStringSyncCompletionHandler
-    ) async {
-        do {
-            let reply = try await mayThrowInvalidMessage(
-                target.sendStringSync(
-                    connection: connection,
-                    url: url
+    private final class SendStringSyncInvocation {
+        private let target: TestWithStreamSwift
+        private let connection: IPC.StreamServerConnection
+        private let url: WTF.String
+        private let completionHandler: CompletionHandlers.TestWithStreamSwift.SendStringSyncCompletionHandler
+
+        init(
+            target: TestWithStreamSwift,
+            connection: IPC.StreamServerConnection,
+            url: WTF.String,
+            completionHandler: CompletionHandlers.TestWithStreamSwift.SendStringSyncCompletionHandler
+        ) {
+            self.target = target
+            self.connection = connection
+            self.url = url
+            self.completionHandler = completionHandler
+        }
+
+        @MainActor
+        func run() async {
+            do {
+                let reply = try await mayThrowInvalidMessage(
+                    target.sendStringSync(
+                        connection: connection,
+                        url: url
+                    )
                 )
-            )
-            completionHandler.pointee(reply)
-        } catch {
-            markMessageInvalid(error, on: connection)
-            CompletionHandlers.TestWithStreamSwift.completeWithDefaultReply(completionHandler)
+                completionHandler.pointee(reply)
+            } catch {
+                markMessageInvalid(error, on: connection)
+                CompletionHandlers.TestWithStreamSwift.completeWithDefaultReply(completionHandler)
+            }
         }
     }
 }

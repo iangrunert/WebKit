@@ -46,30 +46,42 @@ final class TestWithStreamSwiftEnabledByWeakRef: @unchecked Sendable {
                 return
             }
             Task.immediateOnMainActor {
-                await Self.runSendString(
+                await SendStringInvocation(
                     target: target,
                     connection: connection,
                     url: url
-                )
+                ).run()
             }
         }
     }
 
-    @MainActor
-    private static func runSendString(
-        target: TestWithStreamSwiftEnabledBy,
-        connection: IPC.StreamServerConnection,
-        url: WTF.String
-    ) async {
-        do {
-            try await mayThrowInvalidMessage(
-                target.sendString(
-                    connection: connection,
-                    url: url
+    private final class SendStringInvocation {
+        private let target: TestWithStreamSwiftEnabledBy
+        private let connection: IPC.StreamServerConnection
+        private let url: WTF.String
+
+        init(
+            target: TestWithStreamSwiftEnabledBy,
+            connection: IPC.StreamServerConnection,
+            url: WTF.String
+        ) {
+            self.target = target
+            self.connection = connection
+            self.url = url
+        }
+
+        @MainActor
+        func run() async {
+            do {
+                try await mayThrowInvalidMessage(
+                    target.sendString(
+                        connection: connection,
+                        url: url
+                    )
                 )
-            )
-        } catch {
-            markMessageInvalid(error, on: connection)
+            } catch {
+                markMessageInvalid(error, on: connection)
+            }
         }
     }
 }

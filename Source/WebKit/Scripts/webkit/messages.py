@@ -2413,6 +2413,13 @@ def generate_swift_message_handler(receiver):
         # lives in an async method rather than the Task's closure: a typed `catch` inside the closure
         # widens to `any Error`, and spelling the type makes the closure throwing, which
         # -Werror NoUseUnstructuredThrowingTask rejects.
+        # That method is on a class holding the arguments, so the async call passes one pointer however
+        # many the message has: on Win64, LLVM cannot make the guaranteed tail call an async call uses
+        # when the callee takes more stack arguments than the caller.
+        invocation_class = '%sInvocation' % message.name
+        stored = ['target: %s' % class_name] + [p.replace(': sending ', ': ') for p in parameters]
+        stored_names = [p.split(':')[0] for p in stored]
+
         result.append('\n')
         result.append('    @used\n')
         result.append('    func dispatch%s(\n' % message.name)
@@ -2423,23 +2430,28 @@ def generate_swift_message_handler(receiver):
         result.append('                return\n')
         result.append('            }\n')
         result.append('            Task.immediateOnMainActor {\n')
-        result.append('                await Self.run%s(\n' % message.name)
-        forwarded = ['target', 'connection'] + [p.name for p in message.parameters]
-        if completion_handler:
-            forwarded.append('completionHandler')
-        result.append(',\n'.join(['                    %s: %s' % (name, name) for name in forwarded]))
-        result.append('\n                )\n')
+        result.append('                await %s(\n' % invocation_class)
+        result.append(',\n'.join(['                    %s: %s' % (name, name) for name in stored_names]))
+        result.append('\n                ).run()\n')
         result.append('            }\n')
         result.append('        }\n')
         result.append('    }\n')
 
         result.append('\n')
-        result.append('    @MainActor\n')
-        result.append('    private static func run%s(\n' % message.name)
-        body_parameters = ['target: %s' % class_name] + [p.replace(': sending ', ': ') for p in parameters]
-        result.append(',\n'.join(['        %s' % parameter for parameter in body_parameters]))
-        result.append('\n    ) async {\n')
-        base = '        '
+        result.append('    private final class %s {\n' % invocation_class)
+        for parameter in stored:
+            result.append('        private let %s\n' % parameter)
+        result.append('\n')
+        result.append('        init(\n')
+        result.append(',\n'.join(['            %s' % parameter for parameter in stored]))
+        result.append('\n        ) {\n')
+        for name in stored_names:
+            result.append('            self.%s = %s\n' % (name, name))
+        result.append('        }\n')
+        result.append('\n')
+        result.append('        @MainActor\n')
+        result.append('        func run() async {\n')
+        base = '            '
         result.append('%sdo {\n' % base)
         assignment = 'let reply = ' if message.reply_parameters else ''
         call = ['%stry await mayThrowInvalidMessage(' % assignment]
@@ -2457,6 +2469,7 @@ def generate_swift_message_handler(receiver):
         if completion_handler:
             result.append('%s    CompletionHandlers.%s.completeWithDefaultReply(completionHandler)\n' % (base, receiver.name))
         result.append('%s}\n' % base)
+        result.append('        }\n')
         result.append('    }\n')
 
     result.append('}\n')
