@@ -87,6 +87,12 @@
 #define USE_COORDINATED_GRAPHICS_ASYNC_SCROLLBAR 1
 #endif
 
+/* The coordinated graphics compositor renders into an AcceleratedSurface whose
+   buffers are handed to the UI process, instead of sending UpdateInfo bitmaps. */
+#if USE(COORDINATED_GRAPHICS) && (PLATFORM(GTK) || PLATFORM(WPE))
+#define USE_ACCELERATED_SURFACE 1
+#endif
+
 #if PLATFORM(COCOA)
 #define USE_CF 1
 #endif
