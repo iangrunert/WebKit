@@ -36,10 +36,16 @@
 #include <WebCore/Page.h>
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/Settings.h>
-#include <epoxy/egl.h>
-#include <epoxy/gl.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
+
+#if USE(LIBEPOXY)
+#include <epoxy/egl.h>
+#include <epoxy/gl.h>
+#else
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -67,7 +73,7 @@ bool NonCompositedFrameRenderer::initialize()
 {
     if (m_surface->usesGL()) {
         static_assert(sizeof(GLNativeWindowType) <= sizeof(uint64_t), "GLNativeWindowType must not be longer than 64 bits.");
-        m_context = GLContext::create(PlatformDisplay::sharedDisplay(), m_surface->window());
+        m_context = GLContext::create(PlatformDisplay::sharedDisplay(), reinterpret_cast<GLNativeWindowType>(m_surface->window()));
         if (!m_context || !m_context->makeContextCurrent())
             return false;
     }

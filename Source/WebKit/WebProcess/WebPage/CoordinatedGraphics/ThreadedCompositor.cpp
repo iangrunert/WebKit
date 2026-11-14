@@ -61,6 +61,7 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <epoxy/egl.h>
 #include <epoxy/gl.h>
 #else
+#include <EGL/egl.h>
 #include <GLES2/gl2.h>
 #endif
 
@@ -83,8 +84,10 @@ ThreadedCompositor::ThreadedCompositor(WebPage& webPage, LayerTreeHost& layerTre
 {
     ASSERT(RunLoop::isMain());
 
+#if USE(GLIB_EVENT_LOOP)
     // Make sure rendering update is the highest priority task in worker loop.
     m_renderTimer.setPriority(RunLoopSourcePriority::RunLoopTimer - 1);
+#endif
 
     lazyInitialize(m_didCompositeRunLoopObserver, makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::GraphicsCommit, [this] {
         this->didCompositeRunLoopObserverFired();

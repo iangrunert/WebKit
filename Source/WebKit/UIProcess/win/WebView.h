@@ -41,6 +41,7 @@ class IntSize;
 
 namespace WebKit {
 
+class AcceleratedBackingStore;
 class DrawingAreaProxy;
 
 class WebView
@@ -80,6 +81,11 @@ public:
     DrawingAreaProxy* drawingArea() { return page() ? page()->drawingArea() : nullptr; }
 
     void close();
+
+#if USE(ACCELERATED_SURFACE)
+    void enterAcceleratedCompositingMode(uint64_t surfaceID);
+    void exitAcceleratedCompositingMode();
+#endif
 
 private:
     WebView(RECT, const API::PageConfiguration&, HWND parentWindow);
@@ -158,6 +164,9 @@ private:
     const std::unique_ptr<WebKit::PageClientImpl> m_pageClient;
     const RefPtr<WebPageProxy> m_page;
     WebCore::IntSize m_viewSize;
+#if USE(ACCELERATED_SURFACE)
+    RefPtr<AcceleratedBackingStore> m_acceleratedBackingStore;
+#endif
 };
 
 } // namespace WebKit

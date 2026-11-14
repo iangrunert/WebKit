@@ -40,6 +40,10 @@
 /* --------- Windows port --------- */
 
 
+#if !defined(ENABLE_KINETIC_SCROLLING) && ENABLE(ASYNC_SCROLLING)
+#define ENABLE_KINETIC_SCROLLING 1
+#endif
+
 #if !defined(ENABLE_GEOLOCATION)
 #define ENABLE_GEOLOCATION 1
 #endif

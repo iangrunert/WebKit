@@ -238,7 +238,12 @@ void DrawingAreaCoordinatedGraphics::triggerRenderingUpdate()
 
 RefPtr<DisplayRefreshMonitor> DrawingAreaCoordinatedGraphics::createDisplayRefreshMonitor(PlatformDisplayID displayID)
 {
+#if HAVE(DISPLAY_LINK)
     return WebDisplayRefreshMonitor::create(displayID);
+#else
+    UNUSED_PARAM(displayID);
+    return nullptr;
+#endif
 }
 
 void DrawingAreaCoordinatedGraphics::activityStateDidChange(OptionSet<ActivityState> changed, ActivityStateChangeID, CompletionHandler<void()>&& completionHandler)

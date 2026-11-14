@@ -29,7 +29,7 @@
 #if ENABLE(GPU_PROCESS) && ENABLE(VIDEO)
 
 #include <WebCore/NotImplemented.h>
-#include <WebCore/TextureMapperPlatformLayer.h>
+#include <WebCore/PlatformLayer.h>
 
 namespace WebKit {
 

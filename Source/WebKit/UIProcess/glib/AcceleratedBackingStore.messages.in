@@ -26,7 +26,9 @@
     ExceptionForEnabledBy
 ]
 messages -> AcceleratedBackingStore {
+#if OS(UNIX)
     DidCreateDMABufBuffer(WebKit::RendererBufferIdentifier id, WebCore::DMABufBufferAttributes dmaBufAttributes, WebKit::RendererBufferFormat::Usage usage)
+#endif
     DidCreateSHMBuffer(WebKit::RendererBufferIdentifier id, WebCore::ShareableBitmapHandle handle)
 
 #if OS(ANDROID)
@@ -34,7 +36,12 @@ messages -> AcceleratedBackingStore {
 #endif
 
     DidDestroyBuffer(WebKit::RendererBufferIdentifier id)
+#if OS(UNIX)
     Frame(WebKit::RendererBufferIdentifier id, Vector<WebCore::IntRect, 1> damage, UnixFileDescriptor syncFD)
+#endif
+#if !OS(UNIX)
+    Frame(WebKit::RendererBufferIdentifier id, Vector<WebCore::IntRect, 1> damage)
+#endif
 
 #if ENABLE(WPE_PLATFORM)
     DidChangeBufferConfiguration(uint32_t bufferCount);

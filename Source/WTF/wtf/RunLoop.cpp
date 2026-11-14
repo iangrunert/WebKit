@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/RunLoop.h>
 
+#include <wtf/BubbleSort.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
 #include <wtf/StdLibExtras.h>
@@ -247,5 +248,58 @@ void callOnRunLoop(RunLoop& runLoop, Function<void()>&& function)
     else
         runLoop.dispatch(WTF::move(function));
 }
+
+#if USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
+void RunLoop::observeActivity(const Ref<ActivityObserver>& observer)
+{
+    {
+        Locker locker { m_activityObserversLock };
+        ASSERT(!m_activityObservers.contains(observer));
+        m_activityObservers.append(observer);
+        m_activities.add(observer->activities());
+
+        if (m_activityObservers.size() > 1) {
+            // We use bubble sort here because the input is always sorted already. See BubbleSort.h.
+            WTF::bubbleSort(m_activityObservers.mutableSpan(), [](const auto& a, const auto& b) {
+                return a->order() < b->order();
+            });
+        }
+    }
+
+    wakeUp();
+}
+
+void RunLoop::unobserveActivity(const Ref<ActivityObserver>& observer)
+{
+    Locker locker { m_activityObserversLock };
+    ASSERT(m_activityObservers.contains(observer));
+    m_activityObservers.removeFirst(observer);
+    m_activities.remove(observer->activities());
+}
+
+void RunLoop::notifyActivity(Activity activity)
+{
+    // Lock the activity observers, collect the ones to be notified.
+    ActivityObservers observersToBeNotified;
+    {
+        Locker locker { m_activityObserversLock };
+        if (m_activityObservers.isEmpty())
+            return;
+
+        if (!m_activities.contains(activity))
+            return;
+
+        for (auto& observer : m_activityObservers) {
+            if (observer->activities().contains(activity))
+                observersToBeNotified.append(observer);
+        }
+    }
+
+    // Notify the activity observers, without holding a lock - as mutations
+    // to the activity observers are allowed.
+    for (auto& observer : observersToBeNotified)
+        observer->notify();
+}
+#endif // USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
 
 } // namespace WTF

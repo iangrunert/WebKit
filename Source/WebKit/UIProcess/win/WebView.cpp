@@ -29,6 +29,10 @@
 
 #include "APIPageConfiguration.h"
 #include "DrawingAreaProxyCoordinatedGraphics.h"
+
+#if USE(ACCELERATED_SURFACE)
+#include "AcceleratedBackingStore.h"
+#endif
 #include "Logging.h"
 #include "NativeWebKeyboardEvent.h"
 #include "NativeWebMouseEvent.h"
@@ -492,6 +496,12 @@ void WebView::paint(HDC hdc, const IntRect& dirtyRect)
     if (dirtyRect.isEmpty())
         return;
     m_page->endPrinting();
+#if USE(ACCELERATED_SURFACE)
+    WebCore::IntRect scaledDirtyRect = dirtyRect;
+    scaledDirtyRect.scale(m_page->deviceScaleFactor());
+    if (!m_acceleratedBackingStore || !m_acceleratedBackingStore->paint(hdc, scaledDirtyRect))
+        drawPageBackground(hdc, m_page.get(), dirtyRect);
+#else
     if (m_page->drawingArea()) {
         auto painter = [&](auto drawingArea) {
             // FIXME: We should port WebKit1's rect coalescing logic here.
@@ -535,7 +545,23 @@ void WebView::paint(HDC hdc, const IntRect& dirtyRect)
 #endif
     } else
         drawPageBackground(hdc, m_page.get(), dirtyRect);
+#endif // USE(ACCELERATED_SURFACE)
 }
+
+#if USE(ACCELERATED_SURFACE)
+void WebView::enterAcceleratedCompositingMode(uint64_t surfaceID)
+{
+    if (!m_acceleratedBackingStore)
+        m_acceleratedBackingStore = AcceleratedBackingStore::create(*m_page, m_window);
+    m_acceleratedBackingStore->updateSurfaceID(surfaceID);
+}
+
+void WebView::exitAcceleratedCompositingMode()
+{
+    if (m_acceleratedBackingStore)
+        m_acceleratedBackingStore->updateSurfaceID(0);
+}
+#endif
 
 LRESULT WebView::onPaintEvent(HWND hWnd, UINT message, WPARAM, LPARAM, bool& handled)
 {
@@ -798,6 +824,9 @@ void WebView::close()
 
 void WebView::closeInternal()
 {
+#if USE(ACCELERATED_SURFACE)
+    m_acceleratedBackingStore = nullptr;
+#endif
     m_window = 0;
     setParentWindow(0);
     m_page->close();

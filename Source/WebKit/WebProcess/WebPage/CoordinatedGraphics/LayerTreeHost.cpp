@@ -55,8 +55,11 @@
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/StringToIntegerConversion.h>
+
+#if USE(GLIB_EVENT_LOOP)
+#include <wtf/glib/RunLoopSourcePriority.h>
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -172,7 +175,9 @@ void LayerTreeHost::updateRendering()
 
     SetForScope<bool> reentrancyProtector(m_isUpdatingRendering, true);
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
     TraceScope traceScope(LayerTreeHostRenderingUpdateStart, LayerTreeHostRenderingUpdateEnd);
+#endif
 
     m_renderingUpdateID++;
 
@@ -181,7 +186,9 @@ void LayerTreeHost::updateRendering()
     Ref page = m_webPage;
     page->updateRendering();
     page->flushPendingEditorStateUpdate();
+#if PLATFORM(GTK) || PLATFORM(WPE)
     page->flushPendingThemeColorChange();
+#endif
 
     if (m_overlayCompositingLayer)
         m_overlayCompositingLayer->flushCompositingState(visibleContentsRect());

@@ -5,7 +5,42 @@ set(GPUProcess_OUTPUT_NAME WebKitGPUProcess)
 
 include(Headers.cmake)
 include(Platform/Curl.cmake)
-include(Platform/WC.cmake)
+
+if (USE_COORDINATED_GRAPHICS)
+    list(APPEND WebKit_SOURCES
+        UIProcess/win/AcceleratedBackingStore.cpp
+
+        WebProcess/GPU/graphics/win/RemoteGraphicsContextGLProxyWin.cpp
+
+        WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface.cpp
+        WebProcess/WebPage/CoordinatedGraphics/CompositingRunLoop.cpp
+        WebProcess/WebPage/CoordinatedGraphics/CoordinatedSceneState.cpp
+        WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphicsGLib.cpp
+        WebProcess/WebPage/CoordinatedGraphics/FrameRenderer.cpp
+        WebProcess/WebPage/CoordinatedGraphics/LayerTreeHost.cpp
+        WebProcess/WebPage/CoordinatedGraphics/NonCompositedFrameRenderer.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ScrollbarsControllerCoordinated.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ScrollingCoordinatorCoordinated.cpp
+        WebProcess/WebPage/CoordinatedGraphics/ThreadedCompositor.cpp
+    )
+
+    list(APPEND WebKit_PRIVATE_INCLUDE_DIRECTORIES
+        "${WEBKIT_DIR}/Shared/glib"
+        "${WEBKIT_DIR}/UIProcess/glib"
+    )
+
+    list(APPEND WebKit_MESSAGES_IN_FILES
+        UIProcess/glib/AcceleratedBackingStore
+
+        WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface
+    )
+else ()
+    include(Platform/WC.cmake)
+
+    list(APPEND WebKit_SOURCES
+        WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
+    )
+endif ()
 
 list(APPEND WebKit_SOURCES
     GPUProcess/media/win/RemoteMediaPlayerProxyWin.cpp
@@ -70,8 +105,6 @@ list(APPEND WebKit_SOURCES
     WebProcess/MediaCache/WebMediaKeyStorageManager.cpp
 
     WebProcess/WebCoreSupport/win/WebPopupMenuWin.cpp
-
-    WebProcess/WebPage/CoordinatedGraphics/DrawingAreaCoordinatedGraphics.cpp
 
     WebProcess/WebPage/win/WebPageWin.cpp
 

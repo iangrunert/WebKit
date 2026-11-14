@@ -49,10 +49,13 @@
 #include <CoreFoundation/CFRunLoop.h>
 #endif
 
-#if USE(GLIB_EVENT_LOOP)
+#if USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
 #include <wtf/OptionCountedSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
+#endif
+
+#if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/GRefPtr.h>
 #endif
 
@@ -64,7 +67,7 @@ namespace WTF {
 
 template<typename, CanBeGCThread> class ThreadSpecific;
 
-#if USE(GLIB_EVENT_LOOP)
+#if USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
 class ActivityObserver;
 #endif
 
@@ -358,6 +361,24 @@ private:
     // TimerBase* (the timer may be stopped/destroyed first); wndProc() takes the next live one here.
     Deque<TimerBase*> m_timersToFire WTF_GUARDED_BY_LOCK(m_loopLock);
     WindowsMessageHandler m_windowsMessageHandler;
+
+    bool hasPendingMessages() const;
+#endif
+
+#if USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
+    void notifyActivity(Activity);
+
+    friend class ActivityObserver;
+    WTF_EXPORT_PRIVATE void observeActivity(const Ref<ActivityObserver>&);
+    WTF_EXPORT_PRIVATE void unobserveActivity(const Ref<ActivityObserver>&);
+
+    using ActivityObservers = Vector<Ref<ActivityObserver>, 4>;
+    Lock m_activityObserversLock;
+    ActivityObservers m_activityObservers WTF_GUARDED_BY_LOCK(m_activityObserversLock);
+    OptionCountedSet<Activity> m_activities WTF_GUARDED_BY_LOCK(m_activityObserversLock);
+#endif
+
+#if USE(WINDOWS_EVENT_LOOP)
 #elif USE(COCOA_EVENT_LOOP)
     static void performWork(void*);
     const RetainPtr<CFRunLoopRef> m_runLoop;
@@ -366,16 +387,11 @@ private:
     mach_port_t m_wakeUpPort { MACH_PORT_NULL };
 #elif USE(GLIB_EVENT_LOOP)
     void notifyEvent(Event, const char*);
-    void notifyActivity(Activity);
 
     void runGLibMainLoop();
 
     enum class MayBlock { Yes, No };
     void runGLibMainLoopIteration(MayBlock);
-
-    friend class ActivityObserver;
-    WTF_EXPORT_PRIVATE void observeActivity(const Ref<ActivityObserver>&);
-    WTF_EXPORT_PRIVATE void unobserveActivity(const Ref<ActivityObserver>&);
 
     static GSourceFuncs s_runLoopSourceFunctions;
     GRefPtr<GMainContext> m_mainContext;
@@ -383,11 +399,6 @@ private:
 
     Lock m_eventObserversLock;
     WeakHashSet<EventObserver> m_eventObservers WTF_GUARDED_BY_LOCK(m_eventObserversLock);
-
-    using ActivityObservers = Vector<Ref<ActivityObserver>, 4>;
-    Lock m_activityObserversLock;
-    ActivityObservers m_activityObservers WTF_GUARDED_BY_LOCK(m_activityObserversLock);
-    OptionCountedSet<Activity> m_activities WTF_GUARDED_BY_LOCK(m_activityObserversLock);
 
     static constexpr size_t s_pollFDsCapacity = 64;
     Vector<GPollFD, s_pollFDsCapacity> m_pollFDs;
@@ -427,7 +438,7 @@ private:
 #endif
 };
 
-#if USE(GLIB_EVENT_LOOP)
+#if USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
 
 // Activity observers (used to implement WebCore::RunLoopObserver)
 //
@@ -513,7 +524,7 @@ private:
     Callback m_callback WTF_GUARDED_BY_LOCK(m_callbackLock);
 };
 
-#endif // USE(GLIB_EVENT_LOOP)
+#endif // USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
 
 inline void assertIsCurrent(const RunLoop& runLoop) WTF_ASSERTS_ACQUIRED_CAPABILITY(runLoop)
 {
@@ -529,6 +540,6 @@ using WTF::RunLoopMode;
 using WTF::assertIsCurrent;
 using WTF::callOnRunLoop;
 
-#if USE(GLIB_EVENT_LOOP)
+#if USE(GLIB_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
 using WTF::ActivityObserver;
 #endif
