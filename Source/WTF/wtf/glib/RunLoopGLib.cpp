@@ -284,57 +284,6 @@ void RunLoop::observeEvent(const RunLoop::EventObserver& observer)
     m_eventObservers.add(observer);
 }
 
-void RunLoop::observeActivity(const Ref<ActivityObserver>& observer)
-{
-    {
-        Locker locker { m_activityObserversLock };
-        ASSERT(!m_activityObservers.contains(observer));
-        m_activityObservers.append(observer);
-        m_activities.add(observer->activities());
-
-        if (m_activityObservers.size() > 1) {
-            // We use bubble sort here because the input is always sorted already. See BubbleSort.h.
-            WTF::bubbleSort(m_activityObservers.mutableSpan(), [](const auto& a, const auto& b) {
-                return a->order() < b->order();
-            });
-        }
-    }
-
-    wakeUp();
-}
-
-void RunLoop::unobserveActivity(const Ref<ActivityObserver>& observer)
-{
-    Locker locker { m_activityObserversLock };
-    ASSERT(m_activityObservers.contains(observer));
-    m_activityObservers.removeFirst(observer);
-    m_activities.remove(observer->activities());
-}
-
-void RunLoop::notifyActivity(Activity activity)
-{
-    // Lock the activity observers, collect the ones to be notified.
-    ActivityObservers observersToBeNotified;
-    {
-        Locker locker { m_activityObserversLock };
-        if (m_activityObservers.isEmpty())
-            return;
-
-        if (!m_activities.contains(activity))
-            return;
-
-        for (auto& observer : m_activityObservers) {
-            if (observer->activities().contains(activity))
-                observersToBeNotified.append(observer);
-        }
-    }
-
-    // Notify the activity observers, without holding a lock - as mutations
-    // to the activity observers are allowed.
-    for (auto& observer : observersToBeNotified)
-        observer->notify();
-}
-
 void RunLoop::notifyEvent(RunLoop::Event event, const char* name)
 {
     Locker locker { m_eventObserversLock };

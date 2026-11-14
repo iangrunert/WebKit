@@ -62,7 +62,6 @@ platform/generic/ScrollbarsControllerGeneric.cpp
 platform/glib/DragDataGLib.cpp
 platform/glib/PasteboardGLib.cpp
 platform/glib/PlatformResourceGLib.cpp
-platform/glib/RunLoopObserverGLib.cpp
 
 platform/graphics/DMABufBuffer.cpp
 platform/graphics/PlatformDisplay.cpp @no-unify

@@ -77,21 +77,37 @@ LRESULT RunLoop::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 void RunLoop::run()
 {
     auto& runLoop = RunLoop::currentSingleton();
+    runLoop.notifyActivity(Activity::Entry);
     while (true) {
         runLoop.fireTimers();
         MSG message;
         while (BOOL result = ::PeekMessage(&message, nullptr, 0, 0, PM_REMOVE)) {
             if (result == -1)
                 break;
-            if (message.message == WM_QUIT)
+            if (message.message == WM_QUIT) {
+                runLoop.notifyActivity(Activity::Exit);
                 return;
+            }
             runLoop.dispatchMessage(message);
         }
 
+        // Observers may post more work, in which case the loop must not block.
+        runLoop.notifyActivity(Activity::BeforeWaiting);
+        if (runLoop.hasPendingMessages())
+            continue;
+
         DWORD timeout = runLoop.msTillNextTimer();
-        if (timeout > 0)
+        if (timeout > 0) {
             ::MsgWaitForMultipleObjectsEx(0, nullptr, timeout, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+            runLoop.notifyActivity(Activity::AfterWaiting);
+        }
     }
+}
+
+bool RunLoop::hasPendingMessages() const
+{
+    MSG message;
+    return ::PeekMessage(&message, nullptr, 0, 0, PM_NOREMOVE);
 }
 
 DWORD RunLoop::msTillNextTimer()

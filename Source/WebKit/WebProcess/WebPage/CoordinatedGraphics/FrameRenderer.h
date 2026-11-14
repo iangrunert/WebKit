@@ -58,7 +58,9 @@ public:
     virtual void sizeDidChange() = 0;
     virtual void backgroundColorDidChange() { }
     virtual bool ensureDrawing() = 0;
+#if PLATFORM(GTK) || PLATFORM(WPE)
     virtual void fillGLInformation(RenderProcessInfo&&, CompletionHandler<void(RenderProcessInfo&&)>&&) = 0;
+#endif
 
     virtual WebCore::GraphicsLayerFactory* graphicsLayerFactory() { RELEASE_ASSERT_NOT_REACHED(); }
     virtual void setRootCompositingLayer(WebCore::GraphicsLayer*) { RELEASE_ASSERT_NOT_REACHED(); }

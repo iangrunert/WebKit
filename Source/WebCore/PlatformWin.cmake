@@ -4,7 +4,15 @@ include(platform/Adwaita.cmake)
 include(platform/Curl.cmake)
 include(platform/ImageDecoders.cmake)
 include(platform/OpenSSL.cmake)
-include(platform/TextureMapper.cmake)
+if (USE_COORDINATED_GRAPHICS)
+    include(platform/CoordinatedGraphics.cmake)
+
+    list(APPEND WebCore_SOURCES
+        platform/generic/ScrollbarsControllerGeneric.cpp
+    )
+else ()
+    include(platform/TextureMapper.cmake)
+endif ()
 
 if (USE_CAIRO)
     include(platform/Cairo.cmake)

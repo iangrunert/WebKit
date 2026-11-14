@@ -106,7 +106,9 @@ public:
     void enableFrameDamageNotificationForTesting();
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
     void fillGLInformation(RenderProcessInfo&&, CompletionHandler<void(RenderProcessInfo&&)>&&);
+#endif
 
     void releaseMemory(WTF::Critical);
 

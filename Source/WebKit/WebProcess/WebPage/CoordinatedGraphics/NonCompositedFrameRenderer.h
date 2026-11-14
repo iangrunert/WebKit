@@ -65,7 +65,9 @@ private:
     void updateRendering() override;
     void sizeDidChange() override;
     bool ensureDrawing() override;
+#if PLATFORM(GTK) || PLATFORM(WPE)
     void fillGLInformation(RenderProcessInfo&&, CompletionHandler<void(RenderProcessInfo&&)>&&) override;
+#endif
 #if PLATFORM(WPE) && ENABLE(WPE_PLATFORM) && (USE(GBM) || OS(ANDROID))
     void preferredBufferFormatsDidChange() override;
 #endif

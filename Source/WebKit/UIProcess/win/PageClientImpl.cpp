@@ -205,17 +205,29 @@ Ref<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& pa
 
 void PageClientImpl::enterAcceleratedCompositingMode(const LayerTreeContext& layerTreeContext)
 {
+#if USE(ACCELERATED_SURFACE)
+    m_view.enterAcceleratedCompositingMode(layerTreeContext.contextID);
+#else
     notImplemented();
+#endif
 }
 
 void PageClientImpl::exitAcceleratedCompositingMode()
 {
+#if USE(ACCELERATED_SURFACE)
+    m_view.exitAcceleratedCompositingMode();
+#else
     notImplemented();
+#endif
 }
 
 void PageClientImpl::updateAcceleratedCompositingMode(const LayerTreeContext& layerTreeContext)
 {
+#if USE(ACCELERATED_SURFACE)
+    m_view.enterAcceleratedCompositingMode(layerTreeContext.contextID);
+#else
     notImplemented();
+#endif
 }
 
 void PageClientImpl::pageClosed()

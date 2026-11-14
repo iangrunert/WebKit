@@ -39,8 +39,10 @@
 #include <WebCore/Settings.h>
 #include <WebCore/ShareableBitmap.h>
 #include <array>
+#if OS(UNIX)
 #include <fcntl.h>
 #include <unistd.h>
+#endif
 #include <wtf/SafeStrerror.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -56,14 +58,20 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #if USE(ACCELERATED_SURFACE)
 #include "AcceleratedBackingStoreMessages.h"
 #include "AcceleratedSurfaceMessages.h"
+#if USE(LIBEPOXY)
 #include <WebCore/DMABufBuffer.h>
 #include <epoxy/egl.h>
+#else
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
 #endif
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
 #else
-#include <GLES2/gl2.h>
+#include <GLES3/gl3.h>
+#include <GLES2/gl2ext.h>
 #endif
 
 #if USE(GBM)
@@ -107,9 +115,13 @@ static uint64_t generateID()
 
 static bool useExplicitSync()
 {
+#if OS(UNIX)
     auto& display = PlatformDisplay::sharedDisplay();
     auto& extensions = display.eglExtensions();
     return extensions.ANDROID_native_fence_sync && (display.eglCheckVersion(1, 5) || extensions.KHR_fence_sync);
+#else
+    return false;
+#endif
 }
 
 AcceleratedSurface::AcceleratedSurface(WebPage& webPage, Function<void()>&& frameCompleteHandler, RenderingPurpose renderingPurpose)
@@ -117,7 +129,7 @@ AcceleratedSurface::AcceleratedSurface(WebPage& webPage, Function<void()>&& fram
     , m_frameCompleteHandler(WTF::move(frameCompleteHandler))
     , m_id(generateID())
     , m_renderingPurpose(renderingPurpose)
-#if USE(ACCELERATED_SURFACE)
+#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
     , m_hardwareAccelerationEnabled(webPage.corePage()->settings().hardwareAccelerationEnabled())
 #endif
     , m_backgroundColor(webPage.effectiveBackgroundColor())
@@ -220,40 +232,56 @@ void AcceleratedSurface::RenderTargetShareableBuffer::initializeColorBuffer(EGLI
 
 void AcceleratedSurface::RenderTargetShareableBuffer::sendFrame(Vector<WebCore::IntRect, 1>&& damageRects)
 {
+#if OS(UNIX)
     WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStore::Frame(m_id, WTF::move(damageRects), WTF::move(m_renderingFenceFD)), m_surface->surfaceID());
+#else
+    WebProcess::singleton().parentProcessConnection()->send(Messages::AcceleratedBackingStore::Frame(m_id, WTF::move(damageRects)), m_surface->surfaceID());
+#endif
 }
 
 void AcceleratedSurface::RenderTargetShareableBuffer::willRenderFrame()
 {
+#if OS(UNIX)
     if (m_releaseFenceFD) {
         if (auto fence = GLFence::importFD(PlatformDisplay::sharedDisplay().glDisplay(), WTF::move(m_releaseFenceFD)))
             fence->serverWait();
     }
+#endif
 }
 
 std::unique_ptr<GLFence> AcceleratedSurface::RenderTargetShareableBuffer::createRenderingFence(bool useExplicitSync) const
 {
     auto& display = PlatformDisplay::sharedDisplay().glDisplay();
+#if OS(UNIX)
     if (useExplicitSync && supportsExplicitSync()) {
         if (auto fence = GLFence::createExportable(display))
             return fence;
     }
+#else
+    UNUSED_PARAM(useExplicitSync);
+#endif
     return GLFence::create(display);
 }
 
 void AcceleratedSurface::RenderTargetShareableBuffer::sync(bool useExplicitSync)
 {
     if (auto fence = createRenderingFence(useExplicitSync)) {
+#if OS(UNIX)
         m_renderingFenceFD = fence->exportFD();
         if (!m_renderingFenceFD)
             fence->clientWait();
+#else
+        fence->clientWait();
+#endif
     }
 }
 
+#if OS(UNIX)
 void AcceleratedSurface::RenderTargetShareableBuffer::setReleaseFenceFD(UnixFileDescriptor&& releaseFence)
 {
     m_releaseFenceFD = WTF::move(releaseFence);
 }
+#endif
 
 #if USE(GBM)
 std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::RenderTargetEGLImage::create(AcceleratedSurface& surface, const IntSize& size, const BufferFormat& bufferFormat)
@@ -440,6 +468,7 @@ void AcceleratedSurface::RenderTargetSHMImage::didRenderFrame()
         m_skiaSurface->readPixels(info, m_bitmap->mutableSpan().data(), m_bitmap->bytesPerRow(), 0, 0);
 }
 
+#if OS(UNIX)
 std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::RenderTargetTexture::create(AcceleratedSurface& surface, const IntSize& size)
 {
     auto texture = BitmapTexture::create(size);
@@ -494,6 +523,7 @@ AcceleratedSurface::RenderTargetTexture::RenderTargetTexture(AcceleratedSurface&
 }
 
 AcceleratedSurface::RenderTargetTexture::~RenderTargetTexture() = default;
+#endif // OS(UNIX)
 
 #endif // USE(ACCELERATED_SURFACE)
 
@@ -582,7 +612,13 @@ AcceleratedSurface::SwapChain::SwapChain(AcceleratedSurface& surface)
 
     auto& display = PlatformDisplay::sharedDisplay();
     switch (display.type()) {
-#if USE(ACCELERATED_SURFACE)
+#if PLATFORM(WIN)
+    case PlatformDisplay::Type::Windows:
+    case PlatformDisplay::Type::Surfaceless:
+        // FIXME: Share the rendered buffers with the UI process as D3D11 textures instead of copying them to shared memory.
+        m_type = Type::SharedMemory;
+        break;
+#elif USE(ACCELERATED_SURFACE)
     case PlatformDisplay::Type::Surfaceless:
         if (display.eglExtensions().MESA_image_dma_buf_export && WebProcess::singleton().rendererBufferTransportMode().contains(RendererBufferTransportMode::Hardware))
             m_type = Type::Texture;
@@ -751,8 +787,10 @@ std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::SwapChain:
         return RenderTargetEGLImage::create(m_surface.get(), m_size, m_bufferFormat);
     }
 #endif
+#if OS(UNIX)
     case Type::Texture:
         return RenderTargetTexture::create(m_surface.get(), m_size);
+#endif
     case Type::SharedMemory:
         return RenderTargetSHMImage::create(m_surface.get(), m_size);
 #endif
@@ -806,7 +844,11 @@ AcceleratedSurface::RenderTarget* AcceleratedSurface::SwapChain::nextTarget()
     return m_lockedTargets[0].get();
 }
 
+#if OS(UNIX)
 void AcceleratedSurface::SwapChain::releaseTarget(RendererBufferIdentifier targetID, UnixFileDescriptor&& releaseFence)
+#else
+void AcceleratedSurface::SwapChain::releaseTarget(RendererBufferIdentifier targetID)
+#endif
 {
 #if USE(WPE_RENDERER)
     ASSERT(m_type != Type::WPEBackend);
@@ -816,7 +858,9 @@ void AcceleratedSurface::SwapChain::releaseTarget(RendererBufferIdentifier targe
         return item->id() == targetID;
     });
     if (index != notFound) {
+#if OS(UNIX)
         m_lockedTargets[index]->setReleaseFenceFD(WTF::move(releaseFence));
+#endif
         m_freeTargets.insert(0, WTF::move(m_lockedTargets[index]));
         m_lockedTargets.removeAt(index);
     }
@@ -909,6 +953,7 @@ bool AcceleratedSurface::shouldPaintMirrored() const
     case SwapChain::Type::Invalid:
         return false;
 #if USE(ACCELERATED_SURFACE)
+#if OS(UNIX)
     case SwapChain::Type::Texture:
 #if USE(GBM) || OS(ANDROID)
     case SwapChain::Type::EGLImage:
@@ -917,6 +962,7 @@ bool AcceleratedSurface::shouldPaintMirrored() const
         return true;
 #else
         return false;
+#endif
 #endif
     case SwapChain::Type::SharedMemory:
         return false;
@@ -1136,6 +1182,7 @@ const std::optional<Damage>& AcceleratedSurface::renderTargetDamage()
 #endif
 
 #if USE(ACCELERATED_SURFACE)
+#if OS(UNIX)
 void AcceleratedSurface::releaseBuffer(RendererBufferIdentifier targetID, UnixFileDescriptor&& releaseFence)
 {
 #if USE(WPE_RENDERER)
@@ -1143,6 +1190,12 @@ void AcceleratedSurface::releaseBuffer(RendererBufferIdentifier targetID, UnixFi
 #endif
     m_swapChain.releaseTarget(targetID, WTF::move(releaseFence));
 }
+#else
+void AcceleratedSurface::releaseBuffer(RendererBufferIdentifier targetID)
+{
+    m_swapChain.releaseTarget(targetID);
+}
+#endif
 #endif
 
 void AcceleratedSurface::frameDone()

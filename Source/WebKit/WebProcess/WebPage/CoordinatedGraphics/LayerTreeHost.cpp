@@ -32,7 +32,6 @@
 #if USE(COORDINATED_GRAPHICS)
 #include "CoordinatedSceneState.h"
 #include "DrawingArea.h"
-#include "RenderProcessInfo.h"
 #include "WebPageInlines.h"
 #include "WebPageProxyMessages.h"
 #include "WebProcess.h"
@@ -55,8 +54,15 @@
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
-#include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/StringToIntegerConversion.h>
+
+#if USE(GLIB_EVENT_LOOP)
+#include <wtf/glib/RunLoopSourcePriority.h>
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "RenderProcessInfo.h"
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -172,7 +178,9 @@ void LayerTreeHost::updateRendering()
 
     SetForScope<bool> reentrancyProtector(m_isUpdatingRendering, true);
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
     TraceScope traceScope(LayerTreeHostRenderingUpdateStart, LayerTreeHostRenderingUpdateEnd);
+#endif
 
     m_renderingUpdateID++;
 
@@ -181,7 +189,9 @@ void LayerTreeHost::updateRendering()
     Ref page = m_webPage;
     page->updateRendering();
     page->flushPendingEditorStateUpdate();
+#if PLATFORM(GTK) || PLATFORM(WPE)
     page->flushPendingThemeColorChange();
+#endif
 
     if (m_overlayCompositingLayer)
         m_overlayCompositingLayer->flushCompositingState(visibleContentsRect());
@@ -609,11 +619,13 @@ void LayerTreeHost::foreachRegionInDamageHistoryForTesting(NOESCAPE const Functi
 }
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
 void LayerTreeHost::fillGLInformation(RenderProcessInfo&& info, CompletionHandler<void(RenderProcessInfo&&)>&& completionHandler)
 {
     info.paintingThreadsCount = CoordinatedTileManager::numberOfPaintingThreads();
     m_compositor->fillGLInformation(WTF::move(info), WTF::move(completionHandler));
 }
+#endif
 
 void LayerTreeHost::releaseMemory(WTF::Critical critical)
 {

@@ -28,7 +28,6 @@
 
 #if USE(COORDINATED_GRAPHICS)
 #include "DrawingArea.h"
-#include "RenderProcessInfo.h"
 #include "WebPage.h"
 #include "WebPageInlines.h"
 #include <WebCore/GLContext.h>
@@ -36,10 +35,20 @@
 #include <WebCore/Page.h>
 #include <WebCore/PlatformDisplay.h>
 #include <WebCore/Settings.h>
-#include <epoxy/egl.h>
-#include <epoxy/gl.h>
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
+
+#if USE(LIBEPOXY)
+#include <epoxy/egl.h>
+#include <epoxy/gl.h>
+#else
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "RenderProcessInfo.h"
+#endif
 
 namespace WebKit {
 using namespace WebCore;
@@ -378,6 +387,7 @@ void NonCompositedFrameRenderer::commitTransientZoom(double scale, FloatPoint, F
 }
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
 void NonCompositedFrameRenderer::fillGLInformation(RenderProcessInfo&& info, CompletionHandler<void(RenderProcessInfo&&)>&& completionHandler)
 {
     if (!m_context) {
@@ -401,6 +411,7 @@ void NonCompositedFrameRenderer::fillGLInformation(RenderProcessInfo&& info, Com
 
     completionHandler(WTF::move(info));
 }
+#endif
 
 void NonCompositedFrameRenderer::releaseMemory(WTF::Critical critical)
 {

@@ -121,7 +121,9 @@ private:
     void backgroundColorDidChange() override;
     void releaseMemory(WTF::Critical) override;
     bool ensureDrawing() override;
+#if PLATFORM(GTK) || PLATFORM(WPE)
     void fillGLInformation(RenderProcessInfo&&, CompletionHandler<void(RenderProcessInfo&&)>&&) override;
+#endif
     WebCore::GraphicsLayerFactory* graphicsLayerFactory() override;
     void setRootCompositingLayer(WebCore::GraphicsLayer*) override;
     void setViewOverlayRootLayer(WebCore::GraphicsLayer*) override;

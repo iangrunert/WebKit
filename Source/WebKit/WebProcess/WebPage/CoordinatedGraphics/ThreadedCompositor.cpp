@@ -30,7 +30,6 @@
 #include "AcceleratedSurface.h"
 #include "CoordinatedSceneState.h"
 #include "LayerTreeHost.h"
-#include "RenderProcessInfo.h"
 #include "WebPage.h"
 #include "WebProcess.h"
 #include <WebCore/CoordinatedPlatformLayer.h>
@@ -61,7 +60,12 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <epoxy/egl.h>
 #include <epoxy/gl.h>
 #else
+#include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#endif
+
+#if PLATFORM(GTK) || PLATFORM(WPE)
+#include "RenderProcessInfo.h"
 #endif
 
 namespace WebKit {
@@ -83,8 +87,10 @@ ThreadedCompositor::ThreadedCompositor(WebPage& webPage, LayerTreeHost& layerTre
 {
     ASSERT(RunLoop::isMain());
 
+#if USE(GLIB_EVENT_LOOP)
     // Make sure rendering update is the highest priority task in worker loop.
     m_renderTimer.setPriority(RunLoopSourcePriority::RunLoopTimer - 1);
+#endif
 
     lazyInitialize(m_didCompositeRunLoopObserver, makeUnique<RunLoopObserver>(RunLoopObserver::WellKnownOrder::GraphicsCommit, [this] {
         this->didCompositeRunLoopObserverFired();
@@ -767,6 +773,7 @@ void ThreadedCompositor::drawFPSCounter(SkCanvas& canvas)
     canvas.drawString(m_fpsCounter.fpsString.data(), fpsCounterPadding(), m_fpsCounter.textBaseline, fpsCounterFont(), textPaint);
 }
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
 void ThreadedCompositor::fillGLInformation(RenderProcessInfo&& info, CompletionHandler<void(RenderProcessInfo&&)>&& completionHandler)
 {
     m_workQueue->dispatchSync([protectedThis = Ref { *this }, info = WTF::move(info), completionHandler = WTF::move(completionHandler)]() mutable {
@@ -786,6 +793,7 @@ void ThreadedCompositor::fillGLInformation(RenderProcessInfo&& info, CompletionH
         });
     });
 }
+#endif
 
 void ThreadedCompositor::releaseMemory(WTF::Critical critical)
 {

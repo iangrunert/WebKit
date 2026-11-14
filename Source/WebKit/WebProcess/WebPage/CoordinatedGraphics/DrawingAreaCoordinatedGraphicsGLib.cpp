@@ -238,7 +238,12 @@ void DrawingAreaCoordinatedGraphics::triggerRenderingUpdate()
 
 RefPtr<DisplayRefreshMonitor> DrawingAreaCoordinatedGraphics::createDisplayRefreshMonitor(PlatformDisplayID displayID)
 {
+#if HAVE(DISPLAY_LINK)
     return WebDisplayRefreshMonitor::create(displayID);
+#else
+    UNUSED_PARAM(displayID);
+    return nullptr;
+#endif
 }
 
 void DrawingAreaCoordinatedGraphics::activityStateDidChange(OptionSet<ActivityState> changed, ActivityStateChangeID, CompletionHandler<void()>&& completionHandler)
@@ -393,6 +398,7 @@ void DrawingAreaCoordinatedGraphics::foreachRegionInDamageHistoryForTesting(NOES
 }
 #endif
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
 void DrawingAreaCoordinatedGraphics::fillGLInformation(RenderProcessInfo&& info, CompletionHandler<void(RenderProcessInfo&&)>&& completionHandler)
 {
     if (!m_renderer) {
@@ -402,6 +408,7 @@ void DrawingAreaCoordinatedGraphics::fillGLInformation(RenderProcessInfo&& info,
 
     m_renderer->fillGLInformation(WTF::move(info), WTF::move(completionHandler));
 }
+#endif
 
 #if ENABLE(IPC_TESTING_API)
 uint64_t DrawingAreaCoordinatedGraphics::surfaceIDForTesting() const

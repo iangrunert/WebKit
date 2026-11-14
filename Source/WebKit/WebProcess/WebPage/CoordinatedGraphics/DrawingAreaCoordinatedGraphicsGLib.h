@@ -48,7 +48,9 @@ public:
 
     virtual ~DrawingAreaCoordinatedGraphics();
 
+#if PLATFORM(GTK) || PLATFORM(WPE)
     void fillGLInformation(RenderProcessInfo&&, CompletionHandler<void(RenderProcessInfo&&)>&&);
+#endif
 
 #if ENABLE(IPC_TESTING_API)
     uint64_t surfaceIDForTesting() const;

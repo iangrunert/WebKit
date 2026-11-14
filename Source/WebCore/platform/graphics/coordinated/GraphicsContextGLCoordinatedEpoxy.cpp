@@ -26,8 +26,13 @@
 #include "config.h"
 #include "GraphicsContextGLCoordinated.h"
 
-#if ENABLE(WEBGL) && USE(COORDINATED_GRAPHICS) && USE(LIBEPOXY)
+#if ENABLE(WEBGL) && USE(COORDINATED_GRAPHICS)
+
+#if USE(LIBEPOXY)
 #include <epoxy/gl.h>
+#else
+#include <GLES2/gl2.h>
+#endif
 
 namespace WebCore {
 
@@ -51,4 +56,4 @@ GCGLuint GraphicsContextGLCoordinated::setupCurrentTexture() const
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(COORDINATED_GRAPHICS) && USE(LIBEPOXY)
+#endif // ENABLE(WEBGL) && USE(COORDINATED_GRAPHICS)

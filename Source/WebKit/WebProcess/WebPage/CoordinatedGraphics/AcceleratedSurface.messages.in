@@ -26,6 +26,11 @@
     ExceptionForEnabledBy
 ]
 messages -> AcceleratedSurface {
+#if OS(UNIX)
     ReleaseBuffer(WebKit::RendererBufferIdentifier id, UnixFileDescriptor releaseFence)
+#endif
+#if !OS(UNIX)
+    ReleaseBuffer(WebKit::RendererBufferIdentifier id)
+#endif
     FrameDone()
 }

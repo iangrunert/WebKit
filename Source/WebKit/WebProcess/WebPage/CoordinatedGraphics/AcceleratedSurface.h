@@ -31,7 +31,9 @@
 #include "RendererBufferIdentifier.h"
 #include <WebCore/Color.h>
 #include <WebCore/CoordinatedCompositionReason.h>
+#if OS(UNIX)
 #include <WebCore/DMABufBuffer.h>
+#endif
 #include <WebCore/Damage.h>
 #include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
@@ -45,7 +47,9 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakRef.h>
+#if OS(UNIX)
 #include <wtf/unix/UnixFileDescriptor.h>
+#endif
 
 #if USE(GBM) || OS(ANDROID)
 #include "RendererBufferFormat.h"
@@ -61,7 +65,7 @@ struct gbm_bo;
 typedef struct AHardwareBuffer AHardwareBuffer;
 #endif
 
-#if USE(GBM) || OS(ANDROID)
+#if USE(GBM) || OS(ANDROID) || PLATFORM(WIN)
 typedef void *EGLImage;
 #endif
 
@@ -166,7 +170,11 @@ private:
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
+#if OS(UNIX)
     void releaseBuffer(RendererBufferIdentifier, WTF::UnixFileDescriptor&&);
+#else
+    void releaseBuffer(RendererBufferIdentifier);
+#endif
 #endif
     void frameDone();
     void releaseUnusedBuffersTimerFired();
@@ -191,7 +199,9 @@ private:
         virtual void sendFrame(Vector<WebCore::IntRect, 1>&&) { };
 
         virtual void sync(bool) { }
+#if OS(UNIX)
         virtual void setReleaseFenceFD(UnixFileDescriptor&&) { }
+#endif
 
         SkSurface* skiaSurface() const { return m_skiaSurface.get(); }
 
@@ -240,15 +250,19 @@ private:
 
         virtual bool supportsExplicitSync() const = 0;
         void sync(bool) override;
+#if OS(UNIX)
         void setReleaseFenceFD(UnixFileDescriptor&&) override;
+#endif
 
         void initializeColorBuffer(EGLImage = nullptr);
 
         unsigned m_fbo { 0 };
         unsigned m_depthStencilBuffer { 0 };
         unsigned m_colorBuffer { 0 };
+#if OS(UNIX)
         UnixFileDescriptor m_renderingFenceFD;
         UnixFileDescriptor m_releaseFenceFD;
+#endif
     };
 
 #if USE(GBM) || OS(ANDROID)
@@ -323,6 +337,7 @@ private:
         const Ref<WebCore::ShareableBitmap> m_bitmap;
     };
 
+#if OS(UNIX)
     class RenderTargetTexture final : public RenderTargetShareableBuffer {
     public:
         static std::unique_ptr<RenderTarget> create(AcceleratedSurface&, const WebCore::IntSize&);
@@ -334,6 +349,7 @@ private:
 
         const Ref<WebCore::BitmapTexture> m_texture;
     };
+#endif // OS(UNIX)
 #endif // USE(ACCELERATED_SURFACE)
 
 #if USE(WPE_RENDERER)
@@ -366,7 +382,9 @@ private:
             EGLImage,
 #endif
             SharedMemory,
+#if OS(UNIX)
             Texture,
+#endif
 #endif
 #if USE(WPE_RENDERER)
             WPEBackend
@@ -379,7 +397,11 @@ private:
         const WebCore::IntSize& size() const LIFETIME_BOUND { return m_size; }
         bool isEmpty() const { return m_freeTargets.isEmpty() && m_lockedTargets.isEmpty(); }
         RenderTarget* nextTarget();
+#if OS(UNIX)
         void releaseTarget(RendererBufferIdentifier, UnixFileDescriptor&& releaseFence);
+#else
+        void releaseTarget(RendererBufferIdentifier);
+#endif
         void reset();
         void releaseUnusedBuffers();
 
