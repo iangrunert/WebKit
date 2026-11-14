@@ -66,7 +66,6 @@ NonCompositedFrameRenderer::NonCompositedFrameRenderer(WebPage& webPage)
 bool NonCompositedFrameRenderer::initialize()
 {
     if (m_surface->usesGL()) {
-        static_assert(sizeof(GLNativeWindowType) <= sizeof(uint64_t), "GLNativeWindowType must not be longer than 64 bits.");
         m_context = GLContext::create(PlatformDisplay::sharedDisplay(), m_surface->window());
         if (!m_context || !m_context->makeContextCurrent())
             return false;

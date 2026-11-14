@@ -103,13 +103,7 @@ ThreadedCompositor::ThreadedCompositor(WebPage& webPage, LayerTreeHost& layerTre
     m_surface->didCreateCompositingRunLoop(m_workQueue->runLoop());
 
     m_workQueue->dispatchSync([this] {
-        // GLNativeWindowType depends on the EGL implementation: reinterpret_cast works
-        // for pointers (only if they are 64-bit wide and not for other cases), and static_cast for
-        // numeric types (and when needed they get extended to 64-bit) but not for pointers. Using
-        // a plain C cast expression in this one instance works in all cases.
-        static_assert(sizeof(GLNativeWindowType) <= sizeof(uint64_t), "GLNativeWindowType must not be longer than 64 bits.");
-        auto nativeSurfaceHandle = (GLNativeWindowType)m_surface->window();
-        auto context = GLContext::create(PlatformDisplay::sharedDisplay(), nativeSurfaceHandle);
+        auto context = GLContext::create(PlatformDisplay::sharedDisplay(), m_surface->window());
         if (!context || !context->makeContextCurrent()) {
             Locker locker { m_state.lock };
             m_state.state = State::Invalidated;

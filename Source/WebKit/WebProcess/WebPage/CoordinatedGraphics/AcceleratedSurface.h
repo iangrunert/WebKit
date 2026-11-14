@@ -33,6 +33,7 @@
 #include <WebCore/CoordinatedCompositionReason.h>
 #include <WebCore/DMABufBuffer.h>
 #include <WebCore/Damage.h>
+#include <WebCore/GLContext.h>
 #include <WebCore/IntSize.h>
 #include <atomic>
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
@@ -95,7 +96,7 @@ enum class TargetContents : bool {
 };
 
 class AcceleratedSurface final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AcceleratedSurface, WTF::DestructionThread::MainRunLoop>, public CanMakeThreadSafeCheckedPtr<AcceleratedSurface>
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     , public IPC::MessageReceiver
 #endif
 {
@@ -110,20 +111,16 @@ public:
     static Ref<AcceleratedSurface> create(WebPage&, Function<void()>&& frameCompleteHandler, RenderingPurpose);
     ~AcceleratedSurface();
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
     void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 #endif
 
-    uint64_t window();
+    GLNativeWindowType window();
     uint64_t surfaceID() const { return m_id; }
     bool shouldPaintMirrored() const;
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
     bool usesGL() const { return m_renderingPurpose == RenderingPurpose::Composited || m_hardwareAccelerationEnabled; }
-#elif PLATFORM(WPE)
-    constexpr bool usesGL() const { return true; }
-#endif
 
     SkCanvas* canvas();
 
@@ -159,13 +156,13 @@ private:
     AcceleratedSurface(WebPage&, Function<void()>&& frameCompleteHandler, RenderingPurpose);
 
     RenderingPurpose renderingPurpose() const { return m_renderingPurpose; }
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     bool hardwareAccelerationEnabled() const { return m_hardwareAccelerationEnabled; }
 #endif
     bool isOpaque() const;
     std::optional<WebCore::Color> backgroundColor();
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     // IPC::MessageReceiver.
     void didReceiveMessage(IPC::Connection&, IPC::Decoder&) override;
 
@@ -226,7 +223,7 @@ private:
         sk_sp<SkSurface> m_skiaSurface;
     };
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     class RenderTargetShareableBuffer : public RenderTarget {
         WTF_MAKE_TZONE_ALLOCATED(RenderTargetShareableBuffer);
     public:
@@ -337,7 +334,7 @@ private:
 
         const Ref<WebCore::BitmapTexture> m_texture;
     };
-#endif // PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#endif // USE(ACCELERATED_SURFACE)
 
 #if USE(WPE_RENDERER)
     class RenderTargetWPEBackend final : public RenderTarget {
@@ -364,7 +361,7 @@ private:
 
         enum class Type {
             Invalid,
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
 #if USE(GBM) || OS(ANDROID)
             EGLImage,
 #endif
@@ -396,7 +393,7 @@ private:
         }
 #endif
 
-#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(ANDROID))
+#if USE(ACCELERATED_SURFACE) && (USE(GBM) || OS(ANDROID))
         void setupBufferFormat();
 #endif
 
@@ -417,7 +414,7 @@ private:
         Vector<std::unique_ptr<RenderTarget>, s_maximumBuffers> m_freeTargets;
         Vector<std::unique_ptr<RenderTarget>, s_maximumBuffers> m_lockedTargets;
         bool m_initialTargetsCreated { false };
-#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(ANDROID))
+#if USE(ACCELERATED_SURFACE) && (USE(GBM) || OS(ANDROID))
         mutable Lock m_bufferFormatLock;
         BufferFormat m_bufferFormat WTF_GUARDED_BY_LOCK(m_bufferFormatLock);
         bool m_bufferFormatChanged WTF_GUARDED_BY_LOCK(m_bufferFormatLock) { false };
@@ -481,7 +478,7 @@ private:
     Function<void()> m_frameCompleteHandler;
     uint64_t m_id { 0 };
     RenderingPurpose m_renderingPurpose { RenderingPurpose::Composited };
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     bool m_hardwareAccelerationEnabled { true };
 #endif
     mutable Lock m_backgroundColorLock;

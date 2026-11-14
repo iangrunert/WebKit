@@ -53,7 +53,7 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 #include <skia/gpu/ganesh/gl/GrGLBackendSurface.h>
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
 #include "AcceleratedBackingStoreMessages.h"
 #include "AcceleratedSurfaceMessages.h"
 #include <WebCore/DMABufBuffer.h>
@@ -117,7 +117,7 @@ AcceleratedSurface::AcceleratedSurface(WebPage& webPage, Function<void()>&& fram
     , m_frameCompleteHandler(WTF::move(frameCompleteHandler))
     , m_id(generateID())
     , m_renderingPurpose(renderingPurpose)
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     , m_hardwareAccelerationEnabled(webPage.corePage()->settings().hardwareAccelerationEnabled())
 #endif
     , m_backgroundColor(webPage.effectiveBackgroundColor())
@@ -169,7 +169,7 @@ void AcceleratedSurface::RenderTarget::createSkiaSurfaceForFramebuffer(unsigned 
     m_skiaSurface = SkSurfaces::WrapBackendRenderTarget(display.skiaGrContext(), backendRenderTarget, origin, kRGBA_8888_SkColorType, SkColorSpace::MakeSRGB(), &properties);
 }
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
 WTF_MAKE_TZONE_ALLOCATED_IMPL(AcceleratedSurface::RenderTargetShareableBuffer);
 
 AcceleratedSurface::RenderTargetShareableBuffer::RenderTargetShareableBuffer(AcceleratedSurface& surface, const IntSize& size)
@@ -495,7 +495,7 @@ AcceleratedSurface::RenderTargetTexture::RenderTargetTexture(AcceleratedSurface&
 
 AcceleratedSurface::RenderTargetTexture::~RenderTargetTexture() = default;
 
-#endif // PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#endif // USE(ACCELERATED_SURFACE)
 
 #if USE(WPE_RENDERER)
 std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::RenderTargetWPEBackend::create(AcceleratedSurface& surface, const IntSize& initialSize, UnixFileDescriptor&& hostFD)
@@ -573,7 +573,7 @@ void AcceleratedSurface::RenderTargetWPEBackend::didRenderFrame()
 AcceleratedSurface::SwapChain::SwapChain(AcceleratedSurface& surface)
     : m_surface(surface)
 {
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     if (!m_surface->hardwareAccelerationEnabled()) {
         m_type = Type::SharedMemory;
         return;
@@ -582,7 +582,7 @@ AcceleratedSurface::SwapChain::SwapChain(AcceleratedSurface& surface)
 
     auto& display = PlatformDisplay::sharedDisplay();
     switch (display.type()) {
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     case PlatformDisplay::Type::Surfaceless:
         if (display.eglExtensions().MESA_image_dma_buf_export && WebProcess::singleton().rendererBufferTransportMode().contains(RendererBufferTransportMode::Hardware))
             m_type = Type::Texture;
@@ -611,7 +611,7 @@ AcceleratedSurface::SwapChain::SwapChain(AcceleratedSurface& surface)
     case PlatformDisplay::Type::GBM:
 #endif
         break;
-#endif // PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#endif // USE(ACCELERATED_SURFACE)
 #if USE(WPE_RENDERER)
     case PlatformDisplay::Type::WPE:
         m_type = Type::WPEBackend;
@@ -629,7 +629,7 @@ AcceleratedSurface::SwapChain::SwapChain(AcceleratedSurface& surface)
     }
 }
 
-#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(ANDROID))
+#if USE(ACCELERATED_SURFACE) && (USE(GBM) || OS(ANDROID))
 void AcceleratedSurface::SwapChain::setupBufferFormat()
 {
     if (m_type != Type::EGLImage)
@@ -728,7 +728,7 @@ bool AcceleratedSurface::SwapChain::resize(const IntSize& size)
 
 bool AcceleratedSurface::SwapChain::handleBufferFormatChangeIfNeeded()
 {
-#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(ANDROID))
+#if USE(ACCELERATED_SURFACE) && (USE(GBM) || OS(ANDROID))
     if (m_type == Type::EGLImage) {
         Locker locker { m_bufferFormatLock };
         if (m_bufferFormatChanged) {
@@ -744,7 +744,7 @@ bool AcceleratedSurface::SwapChain::handleBufferFormatChangeIfNeeded()
 std::unique_ptr<AcceleratedSurface::RenderTarget> AcceleratedSurface::SwapChain::createTarget() const
 {
     switch (m_type) {
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
 #if USE(GBM) || OS(ANDROID)
     case Type::EGLImage: {
         Locker locker { m_bufferFormatLock };
@@ -908,7 +908,7 @@ bool AcceleratedSurface::shouldPaintMirrored() const
     switch (m_swapChain.type()) {
     case SwapChain::Type::Invalid:
         return false;
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     case SwapChain::Type::Texture:
 #if USE(GBM) || OS(ANDROID)
     case SwapChain::Type::EGLImage:
@@ -989,7 +989,7 @@ void AcceleratedSurface::backgroundColorDidChange()
     if (isOpaque == wasOpaque)
         return;
 
-#if (PLATFORM(GTK) || ENABLE(WPE_PLATFORM)) && (USE(GBM) || OS(ANDROID))
+#if USE(ACCELERATED_SURFACE) && (USE(GBM) || OS(ANDROID))
     m_swapChain.setupBufferFormat();
 #endif
 }
@@ -1007,7 +1007,7 @@ void AcceleratedSurface::didCreateCompositingRunLoop(RunLoop& runLoop)
 #endif
 
     m_compositingRunLoop = &runLoop;
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     WebProcess::singleton().parentProcessConnection()->addMessageReceiver(runLoop, *this, Messages::AcceleratedSurface::messageReceiverName(), m_id);
 #endif
 }
@@ -1022,7 +1022,7 @@ void AcceleratedSurface::willDestroyCompositingRunLoop()
 #endif
 
     m_compositingRunLoop = nullptr;
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
     WebProcess::singleton().parentProcessConnection()->removeMessageReceiver(Messages::AcceleratedSurface::messageReceiverName(), m_id);
 #endif
 }
@@ -1035,7 +1035,7 @@ void AcceleratedSurface::willDestroyGLContext()
     m_swapChain.reset();
 }
 
-uint64_t AcceleratedSurface::window()
+GLNativeWindowType AcceleratedSurface::window()
 {
 #if USE(WPE_RENDERER)
     if (m_swapChain.type() == SwapChain::Type::WPEBackend)
@@ -1135,7 +1135,7 @@ const std::optional<Damage>& AcceleratedSurface::renderTargetDamage()
 }
 #endif
 
-#if PLATFORM(GTK) || ENABLE(WPE_PLATFORM)
+#if USE(ACCELERATED_SURFACE)
 void AcceleratedSurface::releaseBuffer(RendererBufferIdentifier targetID, UnixFileDescriptor&& releaseFence)
 {
 #if USE(WPE_RENDERER)

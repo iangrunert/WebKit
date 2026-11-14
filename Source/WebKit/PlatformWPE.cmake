@@ -532,7 +532,7 @@ if (ENABLE_WPE_PLATFORM)
     endif ()
 
     list(APPEND WebKit_MESSAGES_IN_FILES
-        UIProcess/glib/AcceleratedBackingStore
+        UIProcess/CoordinatedGraphics/AcceleratedBackingStore
 
         WebProcess/WebPage/CoordinatedGraphics/AcceleratedSurface
     )
